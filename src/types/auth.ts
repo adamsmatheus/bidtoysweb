@@ -2,8 +2,12 @@ export interface RegisterRequest {
   name: string
   email: string
   password: string
-  phoneNumber?: string
-  whatsappEnabled?: boolean
+  whatsappNumber: string
+  verificationCode: string
+}
+
+export interface SendWhatsAppCodeRequest {
+  phoneNumber: string
 }
 
 export interface LoginRequest {
