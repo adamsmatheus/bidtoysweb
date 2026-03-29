@@ -1,9 +1,19 @@
+export interface AddressRequest {
+  cep: string
+  street: string
+  city: string
+  state: string
+  number: string
+  complement?: string
+}
+
 export interface RegisterRequest {
   name: string
   email: string
   password: string
   whatsappNumber: string
   verificationCode: string
+  address: AddressRequest
 }
 
 export interface SendWhatsAppCodeRequest {

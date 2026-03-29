@@ -101,7 +101,25 @@ export function AuctionDetailPage() {
               <p className="text-gray-600 text-sm mb-4">{auction.description}</p>
             )}
 
-            <p className="text-sm text-gray-400">Vendedor: {auction.sellerName}</p>
+            {auction.company && (
+              <div className="flex items-center gap-2 mt-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                {auction.company.logoUrl ? (
+                  <img
+                    src={auction.company.logoUrl}
+                    alt={auction.company.name}
+                    className="w-8 h-8 rounded-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
+                    {auction.company.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-sm font-medium text-gray-700">{auction.company.name}</span>
+              </div>
+            )}
+
+            <p className="text-sm text-gray-400 mt-2">Vendedor: {auction.sellerName}</p>
           </div>
 
           {/* Bid list */}

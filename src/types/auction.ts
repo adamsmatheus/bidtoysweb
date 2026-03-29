@@ -8,6 +8,18 @@ export type AuctionStatus =
   | 'FINISHED_WITH_WINNER'
   | 'FINISHED_NO_BIDS'
 
+export interface AuctionImageResponse {
+  id: string
+  fileUrl: string
+  position: number
+}
+
+export interface AuctionCompany {
+  id: string
+  name: string
+  logoUrl: string | null
+}
+
 export interface AuctionResponse {
   id: string
   sellerId: string
@@ -27,6 +39,8 @@ export interface AuctionResponse {
   finishedAt: string | null
   createdAt: string
   updatedAt: string
+  images: AuctionImageResponse[]
+  company: AuctionCompany | null
 }
 
 export interface CreateAuctionRequest {
