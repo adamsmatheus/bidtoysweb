@@ -1,5 +1,6 @@
 import http from './http'
 import type {
+  AuctionImageResponse,
   AuctionResponse,
   AuctionStatus,
   CreateAuctionRequest,
@@ -9,7 +10,7 @@ import type {
 import type { PageResponse } from '@/types/bid'
 
 export const auctionApi = {
-  list: (params?: { status?: AuctionStatus; page?: number; size?: number }) =>
+  list: (params?: { status?: AuctionStatus; page?: number; size?: number; sellerId?: string }) =>
     http.get<PageResponse<AuctionResponse>>('/auctions', { params }).then((r) => r.data),
 
   get: (id: string) =>
@@ -29,4 +30,17 @@ export const auctionApi = {
 
   cancel: (id: string, data?: CancelAuctionRequest) =>
     http.post<AuctionResponse>(`/auctions/${id}/cancel`, data ?? {}).then((r) => r.data),
+
+  uploadImage: (id: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return http
+      .post<AuctionImageResponse>(`/auctions/${id}/images`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data)
+  },
+
+  deleteImage: (id: string, imageId: string) =>
+    http.delete(`/auctions/${id}/images/${imageId}`),
 }

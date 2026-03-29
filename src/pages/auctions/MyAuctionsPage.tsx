@@ -22,13 +22,12 @@ export function MyAuctionsPage() {
   const [page, setPage] = useState(0)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['my-auctions', status, page],
-    queryFn: () => auctionApi.list({ status: status || undefined, page, size: 12 }),
+    queryKey: ['my-auctions', status, page, userId],
+    queryFn: () => auctionApi.list({ status: status || undefined, page, size: 12, sellerId: userId ?? undefined }),
     enabled: !!userId,
   })
 
-  // Filter client-side by sellerId since backend doesn't have /my endpoint yet
-  const myAuctions = data?.content.filter((a) => a.sellerId === userId) ?? []
+  const myAuctions = data?.content ?? []
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
