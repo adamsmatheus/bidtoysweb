@@ -47,30 +47,53 @@ export function AuctionListPage() {
       {activeCompanies && activeCompanies.length > 0 && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Empresas</h2>
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin' }}>
             {activeCompanies.map((company) => (
               <button
                 key={company.id}
                 onClick={() => handleCompanyClick(company.sellerId)}
-                className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
-                  selectedSellerId === company.sellerId
-                    ? 'border-primary-500 bg-primary-50 text-primary-700'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                }`}
+                style={{ minWidth: 160 }}
+                className={`relative flex-shrink-0 flex flex-col rounded-lg overflow-hidden transition-all duration-200 text-left
+                  ${selectedSellerId === company.sellerId
+                    ? 'ring-2 ring-primary-500 ring-offset-2 scale-105 shadow-lg'
+                    : 'hover:scale-105 hover:shadow-md shadow-sm'
+                  }`}
               >
-                {company.logoUrl ? (
-                  <img
-                    src={company.logoUrl}
-                    alt={company.name}
-                    className="w-7 h-7 rounded-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
-                    {company.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className="text-sm font-medium whitespace-nowrap">{company.name}</span>
+                {/* Imagem */}
+                <div className="relative h-20 w-full">
+                  {company.logoUrl ? (
+                    <img
+                      src={company.logoUrl}
+                      alt={company.name}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-primary-600 flex items-center justify-center">
+                      <span className="text-white text-2xl font-bold">
+                        {company.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Glow de seleção */}
+                  {selectedSellerId === company.sellerId && (
+                    <div className="absolute inset-0 bg-primary-500/20" />
+                  )}
+
+                  {/* Checkmark de seleção */}
+                  {selectedSellerId === company.sellerId && (
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+
+                {/* Nome abaixo da imagem */}
+                <div className="bg-white px-3 py-2 border border-t-0 border-gray-200 rounded-b-lg">
+                  <p className="text-xs font-semibold text-gray-800 line-clamp-1">{company.name}</p>
+                </div>
               </button>
             ))}
           </div>

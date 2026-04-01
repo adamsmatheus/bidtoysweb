@@ -10,8 +10,20 @@ export function Navbar() {
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link to="/" className="font-bold text-primary-700 text-lg tracking-tight">
-          BidToys
+        <Link to="/">
+          <div
+            style={{
+              width: '140px',
+              height: '44px',
+              overflow: 'hidden',
+              backgroundImage: 'url(/logo.jpg)',
+              backgroundSize: '160%',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
+            role="img"
+            aria-label="Logo"
+          />
         </Link>
 
         <div className="flex items-center gap-4 text-sm">
