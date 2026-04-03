@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { auctionApi } from '@/api/auctionApi'
+import { adminApi } from '@/api/adminApi'
+
 
 export function AdminDashboardPage() {
   const { data: pending } = useQuery({
     queryKey: ['admin-auctions-pending'],
-    queryFn: () => auctionApi.list({ status: 'PENDING_APPROVAL', size: 1 }),
+    queryFn: () => adminApi.listPending(0, 1),
   })
 
   const { data: active } = useQuery({

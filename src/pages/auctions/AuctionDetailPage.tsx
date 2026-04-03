@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { auctionApi } from '@/api/auctionApi'
@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore'
 import { StatusBadge } from '@/components/StatusBadge'
 import { CountdownTimer } from '@/components/CountdownTimer'
 import { BidForm } from '@/components/BidForm'
+import { formatBRL } from '@/utils/currency'
 
 export function AuctionDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -16,6 +17,8 @@ export function AuctionDetailPage() {
   const queryClient = useQueryClient()
   const { userId } = useAuthStore()
   const { setLiveAuction, currentPrice, nextMinimumBid, endsAt, isFinished, status: liveStatus, winnerUserId, reset } = useAuctionStore()
+
+  const [selectedImage, setSelectedImage] = useState(0)
 
   const { data: auction, isLoading } = useQuery({
     queryKey: ['auction', id],
@@ -122,6 +125,43 @@ export function AuctionDetailPage() {
             <p className="text-sm text-gray-400 mt-2">Vendedor: {auction.sellerName}</p>
           </div>
 
+          {/* Image gallery */}
+          {auction.images.length > 0 && (
+            <div className="card p-4 space-y-3">
+              {/* Main image */}
+              <div className="w-full aspect-video rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                <img
+                  src={auction.images[selectedImage].fileUrl}
+                  alt={`Imagem ${selectedImage + 1}`}
+                  className="max-h-full max-w-full object-contain"
+                />
+              </div>
+
+              {/* Thumbnails */}
+              {auction.images.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {auction.images.map((img, idx) => (
+                    <button
+                      key={img.id}
+                      onClick={() => setSelectedImage(idx)}
+                      className={`shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition-colors ${
+                        idx === selectedImage
+                          ? 'border-primary-600'
+                          : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img
+                        src={img.fileUrl}
+                        alt={`Miniatura ${idx + 1}`}
+                        className="w-full h-full object-contain bg-gray-50"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Bid list */}
           <div className="card p-6">
             <h2 className="font-semibold text-gray-900 mb-3">Histórico de lances</h2>
@@ -133,7 +173,7 @@ export function AuctionDetailPage() {
                   <li key={bid.id} className="py-2 flex justify-between text-sm">
                     <span className="text-gray-500 font-mono">{bid.bidderId.slice(0, 8)}...</span>
                     <span className="font-semibold text-primary-700">
-                      R$ {bid.amount.toLocaleString('pt-BR')}
+                      {formatBRL(bid.amount)}
                     </span>
                     <span className="text-gray-400">
                       {new Date(bid.createdAt).toLocaleTimeString('pt-BR')}
@@ -151,7 +191,7 @@ export function AuctionDetailPage() {
             <div>
               <p className="text-xs text-gray-500">Lance atual</p>
               <p className="text-3xl font-bold text-primary-700">
-                R$ {displayPrice.toLocaleString('pt-BR')}
+                {formatBRL(displayPrice)}
               </p>
             </div>
 
@@ -251,8 +291,8 @@ export function AuctionDetailPage() {
           </div>
 
           <div className="card p-4 text-xs text-gray-400 space-y-1">
-            <p>Preço inicial: R$ {auction.initialPriceAmount.toLocaleString('pt-BR')}</p>
-            <p>Incremento mínimo: R$ {auction.minIncrementAmount.toLocaleString('pt-BR')}</p>
+            <p>Preço inicial: {formatBRL(auction.initialPriceAmount)}</p>
+            <p>Incremento mínimo: {formatBRL(auction.minIncrementAmount)}</p>
             <p>Duração: {Math.round(auction.durationSeconds / 60)} min</p>
           </div>
         </div>

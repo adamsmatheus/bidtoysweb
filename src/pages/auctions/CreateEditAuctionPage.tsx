@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { auctionApi } from '@/api/auctionApi'
 import { companyApi } from '@/api/companyApi'
 import { useAuthStore } from '@/store/authStore'
+import { CurrencyInput } from '@/components/CurrencyInput'
 
 const MAX_IMAGES = 5
 const EDITABLE_STATUSES = ['DRAFT', 'REJECTED']
@@ -70,19 +71,6 @@ export function CreateEditAuctionPage() {
 
   const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
-
-  const setCurrency = (field: 'initialPriceAmount' | 'minIncrementAmount') =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const raw = e.target.value.replace(/\D/g, '')
-      setForm((prev) => ({ ...prev, [field]: raw }))
-    }
-
-  const formatBRL = (raw: string): string => {
-    if (!raw) return ''
-    const n = parseInt(raw, 10)
-    if (isNaN(n)) return ''
-    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })
-  }
 
   const updateMutation = useMutation({
     mutationFn: () =>
@@ -304,23 +292,19 @@ export function CreateEditAuctionPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Preço inicial *</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                className="input"
-                value={formatBRL(form.initialPriceAmount)}
-                onChange={setCurrency('initialPriceAmount')}
+              <CurrencyInput
+                value={form.initialPriceAmount}
+                onChange={(v) => setForm((prev) => ({ ...prev, initialPriceAmount: v }))}
+                placeholder="100"
                 required
               />
             </div>
             <div>
               <label className="label">Incremento mínimo *</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                className="input"
-                value={formatBRL(form.minIncrementAmount)}
-                onChange={setCurrency('minIncrementAmount')}
+              <CurrencyInput
+                value={form.minIncrementAmount}
+                onChange={(v) => setForm((prev) => ({ ...prev, minIncrementAmount: v }))}
+                placeholder="10"
                 required
               />
             </div>

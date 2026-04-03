@@ -9,20 +9,12 @@ export function Navbar() {
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/">
-          <div
-            style={{
-              width: '140px',
-              height: '44px',
-              overflow: 'hidden',
-              backgroundImage: 'url(/logo.jpg)',
-              backgroundSize: '160%',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-            }}
-            role="img"
-            aria-label="Logo"
+          <img
+            src="/palavra.png"
+            alt="BidToys"
+            className="h-20 w-auto object-contain -my-2"
           />
         </Link>
 
