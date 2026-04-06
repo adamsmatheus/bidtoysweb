@@ -7,6 +7,7 @@ export interface BidResponse {
   id: string
   auctionId: string
   bidderId: string
+  bidderName: string
   amount: number
   createdAt: string
 }

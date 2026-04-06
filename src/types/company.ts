@@ -3,6 +3,7 @@ export interface CompanyResponse {
   name: string
   description: string | null
   logoUrl: string | null
+  pixKey: string | null
 }
 
 export interface ActiveCompanyResponse {
@@ -17,4 +18,5 @@ export interface UpsertCompanyRequest {
   name: string
   description?: string
   logoUrl?: string
+  pixKey?: string
 }

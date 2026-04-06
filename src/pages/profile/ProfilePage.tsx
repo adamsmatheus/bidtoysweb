@@ -21,7 +21,7 @@ export function ProfilePage() {
   })
 
   const [form, setForm] = useState({ name: '', phoneNumber: '' })
-  const [companyForm, setCompanyForm] = useState({ name: '', description: '', logoUrl: '' })
+  const [companyForm, setCompanyForm] = useState({ name: '', description: '', logoUrl: '', pixKey: '' })
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -39,6 +39,7 @@ export function ProfilePage() {
         name: company.name,
         description: company.description ?? '',
         logoUrl: company.logoUrl ?? '',
+        pixKey: company.pixKey ?? '',
       })
     }
   }, [company])
@@ -78,6 +79,7 @@ export function ProfilePage() {
         name: companyForm.name,
         description: companyForm.description || undefined,
         logoUrl,
+        pixKey: companyForm.pixKey || undefined,
       })
     },
     onSuccess: (data) => {
@@ -96,7 +98,7 @@ export function ProfilePage() {
   const deleteMutation = useMutation({
     mutationFn: () => companyApi.deleteMe(),
     onSuccess: () => {
-      setCompanyForm({ name: '', description: '', logoUrl: '' })
+      setCompanyForm({ name: '', description: '', logoUrl: '', pixKey: '' })
       setLogoFile(null)
       setLogoPreview(null)
       setConfirmDelete(false)
@@ -237,6 +239,20 @@ export function ProfilePage() {
               <p className="text-xs text-gray-400 mt-1">JPEG, PNG ou WEBP · máx. 5 MB</p>
             )}
           </div>
+          <div>
+            <label className="label">Chave PIX</label>
+            <input
+              type="text"
+              className="input"
+              value={companyForm.pixKey}
+              onChange={(e) => setCompanyForm((p) => ({ ...p, pixKey: e.target.value }))}
+              placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"
+              maxLength={150}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Sua chave PIX será enviada ao vencedor pelo WhatsApp para pagamento.
+            </p>
+          </div>
 
           {companyMutation.isSuccess && (
             <p className="text-sm text-green-600">Empresa salva!</p>
@@ -249,7 +265,11 @@ export function ProfilePage() {
           )}
 
           {company ? (
-            <div className="flex items-center gap-3 pt-1">
+            <div className="space-y-3 pt-1">
+              <button type="submit" className="btn-primary" disabled={companyMutation.isPending}>
+                {companyMutation.isPending ? 'Salvando...' : 'Salvar PIX'}
+              </button>
+              <div className="flex items-center gap-3">
               {confirmDelete ? (
                 <>
                   <span className="text-sm text-gray-600">Confirma a exclusão da empresa?</span>
@@ -279,6 +299,7 @@ export function ProfilePage() {
                   Deletar empresa
                 </button>
               )}
+              </div>
             </div>
           ) : (
             <button type="submit" className="btn-primary" disabled={companyMutation.isPending}>

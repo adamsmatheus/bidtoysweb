@@ -7,6 +7,7 @@ import { formatBRL } from '@/utils/currency'
 interface Props {
   auctionId: string
   nextMinimumBid: number
+  minIncrementAmount: number
   disabled?: boolean
 }
 
@@ -59,9 +60,10 @@ function ConfirmModal({ amount, onConfirm, onCancel, isPending }: ConfirmModalPr
   )
 }
 
-export function BidForm({ auctionId, nextMinimumBid, disabled }: Props) {
+export function BidForm({ auctionId, nextMinimumBid, minIncrementAmount, disabled }: Props) {
   const [amount, setAmount] = useState('')
   const [decimalError, setDecimalError] = useState(false)
+  const [incrementError, setIncrementError] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const queryClient = useQueryClient()
 
@@ -90,12 +92,18 @@ export function BidForm({ auctionId, nextMinimumBid, disabled }: Props) {
       return
     }
     setDecimalError(false)
+    if ((val - (nextMinimumBid - minIncrementAmount)) % minIncrementAmount !== 0) {
+      setIncrementError(true)
+      return
+    }
+    setIncrementError(false)
     setShowConfirm(true)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(e.target.value)
     setDecimalError(false)
+    setIncrementError(false)
   }
 
   const errorMsg = (() => {
@@ -118,7 +126,7 @@ export function BidForm({ auctionId, nextMinimumBid, disabled }: Props) {
               value={amount}
               onChange={handleChange}
               min={nextMinimumBid}
-              step={1}
+              step={minIncrementAmount}
               disabled={disabled || mutation.isPending}
               required
             />
@@ -134,6 +142,9 @@ export function BidForm({ auctionId, nextMinimumBid, disabled }: Props) {
 
         {decimalError && (
           <p className="text-sm text-red-600">O lance deve ser um valor inteiro, sem centavos.</p>
+        )}
+        {incrementError && (
+          <p className="text-sm text-red-600">O lance deve ser múltiplo de {formatBRL(minIncrementAmount)} (ex: {formatBRL(nextMinimumBid)}, {formatBRL(nextMinimumBid + minIncrementAmount)}, ...).</p>
         )}
         {errorMsg && (
           <p className="text-sm text-red-600">{errorMsg}</p>

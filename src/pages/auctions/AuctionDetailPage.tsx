@@ -171,7 +171,7 @@ export function AuctionDetailPage() {
               <ul className="divide-y divide-gray-100">
                 {bidsPage?.content.map((bid) => (
                   <li key={bid.id} className="py-2 flex justify-between text-sm">
-                    <span className="text-gray-500 font-mono">{bid.bidderId.slice(0, 8)}...</span>
+                    <span className="text-gray-500">{bid.bidderName}</span>
                     <span className="font-semibold text-primary-700">
                       {formatBRL(bid.amount)}
                     </span>
@@ -209,7 +209,7 @@ export function AuctionDetailPage() {
               <div className="rounded-md bg-purple-50 border border-purple-200 p-3 text-sm text-purple-700">
                 {winnerUserId === userId || auction.winnerUserId === userId
                   ? '🏆 Você ganhou este leilão!'
-                  : `Vencedor: ${(winnerUserId ?? auction.winnerUserId ?? '').slice(0, 8)}...`}
+                  : `Vencedor: ${bidsPage?.content[0]?.bidderName ?? (winnerUserId ?? auction.winnerUserId ?? '').slice(0, 8) + '...'}`}
               </div>
             )}
 
@@ -224,6 +224,7 @@ export function AuctionDetailPage() {
               <BidForm
                 auctionId={auction.id}
                 nextMinimumBid={displayNextBid}
+                minIncrementAmount={auction.minIncrementAmount}
                 disabled={isFinishedNow}
               />
             )}
