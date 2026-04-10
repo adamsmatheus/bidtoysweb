@@ -7,10 +7,8 @@ import { AuctionCard } from '@/components/AuctionCard'
 import type { AuctionStatus } from '@/types/auction'
 
 const STATUS_OPTIONS: { value: AuctionStatus | ''; label: string }[] = [
-  { value: '', label: 'Todos' },
   { value: 'ACTIVE', label: 'Ativos' },
   { value: 'READY_TO_START', label: 'Prontos para iniciar' },
-  { value: 'FINISHED_WITH_WINNER', label: 'Encerrados' },
   { value: 'FINISHED_NO_BIDS', label: 'Sem lances' },
 ]
 

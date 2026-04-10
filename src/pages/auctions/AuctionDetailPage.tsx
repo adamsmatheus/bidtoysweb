@@ -20,10 +20,17 @@ export function AuctionDetailPage() {
 
   const [selectedImage, setSelectedImage] = useState(0)
 
+  const TRANSITIONAL_STATUSES = ['PENDING_APPROVAL', 'READY_TO_START']
+
   const { data: auction, isLoading } = useQuery({
     queryKey: ['auction', id],
     queryFn: () => auctionApi.get(id!),
     enabled: !!id,
+    staleTime: 0,
+    refetchInterval: (query) =>
+      TRANSITIONAL_STATUSES.includes(query.state.data?.status ?? '')
+        ? 5_000
+        : false,
   })
 
   const { data: bidsPage } = useQuery({

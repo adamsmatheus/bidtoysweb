@@ -11,4 +11,10 @@ export const authApi = {
 
   sendWhatsAppCode: (data: SendWhatsAppCodeRequest) =>
     http.post('/auth/whatsapp/send-code', data),
+
+  forgotPassword: (email: string) =>
+    http.post('/auth/forgot-password', { email }),
+
+  resetPassword: (data: { email: string; code: string; newPassword: string }) =>
+    http.post('/auth/reset-password', data),
 }

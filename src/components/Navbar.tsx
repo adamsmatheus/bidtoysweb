@@ -39,6 +39,17 @@ export function Navbar() {
             </NavLink>
           )}
 
+          {auth && (
+            <NavLink
+              to="/my-wins"
+              className={({ isActive }) =>
+                isActive ? 'text-primary-700 font-medium' : 'text-gray-600 hover:text-gray-900'
+              }
+            >
+              Meus arremates
+            </NavLink>
+          )}
+
           {auth && isAdmin() && (
             <NavLink
               to="/admin"

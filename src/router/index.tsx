@@ -5,10 +5,13 @@ import { AdminRoute } from '@/components/AdminRoute'
 
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { AuctionListPage } from '@/pages/auctions/AuctionListPage'
 import { AuctionDetailPage } from '@/pages/auctions/AuctionDetailPage'
 import { CreateEditAuctionPage } from '@/pages/auctions/CreateEditAuctionPage'
 import { MyAuctionsPage } from '@/pages/auctions/MyAuctionsPage'
+import { MyWinsPage } from '@/pages/auctions/MyWinsPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
 import { PendingAuctionsPage } from '@/pages/admin/PendingAuctionsPage'
@@ -23,6 +26,8 @@ export function AppRouter() {
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/auctions" element={<AuctionListPage />} />
           <Route path="/auctions/:id" element={<AuctionDetailPage />} />
 
@@ -31,6 +36,7 @@ export function AppRouter() {
             <Route path="/auctions/new" element={<CreateEditAuctionPage />} />
             <Route path="/auctions/:id/edit" element={<CreateEditAuctionPage />} />
             <Route path="/my-auctions" element={<MyAuctionsPage />} />
+            <Route path="/my-wins" element={<MyWinsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
