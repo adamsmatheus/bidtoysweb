@@ -8,85 +8,104 @@ export function Navbar() {
   const auth = isAuthenticated()
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link to="/">
-          <img
-            src="/palavra.png"
-            alt="BidToys"
-            className="h-20 w-auto object-contain -my-2"
-          />
-        </Link>
+    <header className="sticky top-0 w-full z-50 bg-white/80 backdrop-blur-xl shadow-sm">
+      <div className="flex justify-between items-center h-20 px-6 max-w-screen-2xl mx-auto">
+        {/* Logo + Nav */}
+        <div className="flex items-center gap-8">
+          <Link to="/">
+            <img
+              src="/palavra.png"
+              alt="BidToys"
+              className="h-10 w-auto object-contain"
+            />
+          </Link>
 
-        <div className="flex items-center gap-4 text-sm">
-          <NavLink
-            to="/auctions"
-            className={({ isActive }) =>
-              isActive ? 'text-primary-700 font-medium' : 'text-gray-600 hover:text-gray-900'
-            }
-          >
-            Leilões
-          </NavLink>
-
-          {auth && (
+          <nav className="hidden md:flex items-center gap-6">
             <NavLink
-              to="/my-auctions"
+              to="/auctions"
               className={({ isActive }) =>
-                isActive ? 'text-primary-700 font-medium' : 'text-gray-600 hover:text-gray-900'
+                isActive
+                  ? 'text-sm font-semibold text-primary border-b-2 border-primary pb-1'
+                  : 'text-sm font-semibold text-on-surface-variant hover:text-primary transition-colors'
               }
             >
-              Meus leilões
+              Leilões
             </NavLink>
-          )}
 
-          {auth && (
-            <NavLink
-              to="/my-wins"
-              className={({ isActive }) =>
-                isActive ? 'text-primary-700 font-medium' : 'text-gray-600 hover:text-gray-900'
-              }
-            >
-              Meus arremates
-            </NavLink>
-          )}
+            {auth && (
+              <NavLink
+                to="/my-auctions"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'text-sm font-semibold text-primary border-b-2 border-primary pb-1'
+                    : 'text-sm font-semibold text-on-surface-variant hover:text-primary transition-colors'
+                }
+              >
+                Meus Leilões
+              </NavLink>
+            )}
 
-          {auth && isAdmin() && (
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                isActive ? 'text-primary-700 font-medium' : 'text-gray-600 hover:text-gray-900'
-              }
-            >
-              Admin
-            </NavLink>
-          )}
+            {auth && (
+              <NavLink
+                to="/my-wins"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'text-sm font-semibold text-primary border-b-2 border-primary pb-1'
+                    : 'text-sm font-semibold text-on-surface-variant hover:text-primary transition-colors'
+                }
+              >
+                Meus Arremates
+              </NavLink>
+            )}
+
+            {auth && isAdmin() && (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'text-sm font-semibold text-primary border-b-2 border-primary pb-1'
+                    : 'text-sm font-semibold text-on-surface-variant hover:text-primary transition-colors'
+                }
+              >
+                Admin
+              </NavLink>
+            )}
+          </nav>
+        </div>
+
+        {/* Trailing actions */}
+        <div className="flex items-center gap-3">
+          <button className="p-2 rounded-full hover:bg-surface-container transition-colors">
+            <span className="material-symbols-outlined text-on-surface-variant">notifications</span>
+          </button>
 
           {auth ? (
             <div className="flex items-center gap-3">
               <NavLink
                 to="/profile"
-                className={({ isActive }) =>
-                  isActive ? 'text-primary-700 font-medium' : 'text-gray-600 hover:text-gray-900'
-                }
+                className="text-sm font-semibold text-on-surface-variant hover:text-primary transition-colors"
               >
                 {name ?? 'Perfil'}
               </NavLink>
-              <button onClick={logout} className="btn-secondary btn-sm">
+              <button
+                onClick={logout}
+                className="text-sm font-semibold text-on-surface-variant hover:text-error transition-colors"
+              >
                 Sair
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Link to="/login" className="btn-secondary btn-sm">
+              <Link to="/login" className="btn btn-secondary btn-sm">
                 Entrar
               </Link>
-              <Link to="/register" className="btn-primary btn-sm">
+              <Link to="/register" className="btn btn-primary btn-sm">
                 Cadastrar
               </Link>
             </div>
           )}
         </div>
       </div>
-    </nav>
+    </header>
   )
 }

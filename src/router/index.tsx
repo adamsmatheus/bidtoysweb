@@ -21,7 +21,7 @@ export function AppRouter() {
   return (
     <>
       <Navbar />
-      <main>
+      <main className="min-h-[calc(100vh-5rem)]">
         <Routes>
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />

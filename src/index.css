@@ -7,44 +7,58 @@
     box-sizing: border-box;
   }
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: #f6f6ff;
+    color: #272e42;
     margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
+    @apply inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-bold transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
   }
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700;
+    @apply btn text-on-primary;
+    background: linear-gradient(135deg, #0050d4 0%, #7b9cff 100%);
   }
   .btn-secondary {
-    @apply btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50;
+    @apply btn bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest;
   }
   .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-700;
+    @apply btn bg-error text-on-error hover:bg-error-dim;
   }
   .btn-sm {
-    @apply px-3 py-1.5 text-xs;
+    @apply px-4 py-2 text-xs;
   }
   .btn-lg {
-    @apply px-6 py-3 text-base;
+    @apply px-8 py-4 text-base;
   }
 
   .input {
-    @apply block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500;
+    @apply block w-full rounded-2xl border-0 bg-surface-container-high px-4 py-3 text-sm placeholder-outline shadow-none outline-none transition-all focus:ring-2 focus:ring-primary/20 focus:bg-white disabled:bg-surface-container disabled:text-on-surface-variant;
   }
 
   .label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
+    @apply block text-sm font-semibold text-on-surface-variant mb-1.5;
   }
 
   .card {
-    @apply bg-white rounded-lg border border-gray-200 shadow-sm;
+    @apply bg-surface-container-lowest rounded-2xl shadow-sm ring-1 ring-outline-variant/10;
   }
 
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide;
   }
+
+  .signature-gradient {
+    background: linear-gradient(135deg, #0050d4 0%, #7b9cff 100%);
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }

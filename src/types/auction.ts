@@ -41,6 +41,7 @@ export interface AuctionResponse {
   updatedAt: string
   images: AuctionImageResponse[]
   company: AuctionCompany | null
+  bidCount: number
 }
 
 export interface CreateAuctionRequest {
