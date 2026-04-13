@@ -71,6 +71,21 @@ export function AuctionDetailPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auction', id] }),
   })
 
+  const declarePaymentMutation = useMutation({
+    mutationFn: () => auctionApi.declarePayment(id!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auction', id] }),
+  })
+
+  const confirmPaymentMutation = useMutation({
+    mutationFn: () => auctionApi.confirmPayment(id!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auction', id] }),
+  })
+
+  const disputePaymentMutation = useMutation({
+    mutationFn: () => auctionApi.disputePayment(id!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auction', id] }),
+  })
+
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 animate-pulse space-y-4">
@@ -85,6 +100,7 @@ export function AuctionDetailPage() {
   }
 
   const isSeller = auction.sellerId === userId
+  const isWinner = (winnerUserId ?? auction.winnerUserId) === userId
   const isActive = auction.status === 'ACTIVE'
   const displayPrice = currentPrice ?? auction.currentPriceAmount
   const displayNextBid = nextMinimumBid ?? auction.nextMinimumBid
@@ -214,9 +230,72 @@ export function AuctionDetailPage() {
 
             {isFinishedNow && displayStatus === 'FINISHED_WITH_WINNER' && (
               <div className="rounded-md bg-purple-50 border border-purple-200 p-3 text-sm text-purple-700">
-                {winnerUserId === userId || auction.winnerUserId === userId
-                  ? '🏆 Você ganhou este leilão!'
+                {isWinner
+                  ? 'Você ganhou este leilão!'
                   : `Vencedor: ${bidsPage?.content[0]?.bidderName ?? (winnerUserId ?? auction.winnerUserId ?? '').slice(0, 8) + '...'}`}
+              </div>
+            )}
+
+            {/* Vencedor declara pagamento */}
+            {displayStatus === 'FINISHED_WITH_WINNER' && isWinner && (
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-500">
+                  Realize o pagamento via PIX e clique abaixo para avisar o vendedor.
+                </p>
+                <button
+                  className="btn-primary w-full btn-sm"
+                  onClick={() => declarePaymentMutation.mutate()}
+                  disabled={declarePaymentMutation.isPending}
+                >
+                  {declarePaymentMutation.isPending ? 'Aguarde...' : 'Confirmar que realizei o pagamento'}
+                </button>
+              </div>
+            )}
+
+            {/* Status: pagamento declarado */}
+            {displayStatus === 'PAYMENT_DECLARED' && (
+              <div className="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+                {isWinner
+                  ? 'Pagamento declarado. Aguardando confirmação do vendedor.'
+                  : 'O vencedor declarou que realizou o pagamento. Verifique seu extrato.'}
+              </div>
+            )}
+
+            {/* Vendedor confirma ou contesta */}
+            {displayStatus === 'PAYMENT_DECLARED' && isSeller && (
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <button
+                  className="btn-primary w-full btn-sm"
+                  onClick={() => confirmPaymentMutation.mutate()}
+                  disabled={confirmPaymentMutation.isPending || disputePaymentMutation.isPending}
+                >
+                  {confirmPaymentMutation.isPending ? 'Aguarde...' : 'Confirmar recebimento'}
+                </button>
+                <button
+                  className="btn-danger w-full btn-sm"
+                  onClick={() => disputePaymentMutation.mutate()}
+                  disabled={confirmPaymentMutation.isPending || disputePaymentMutation.isPending}
+                >
+                  {disputePaymentMutation.isPending ? 'Aguarde...' : 'Contestar pagamento'}
+                </button>
+              </div>
+            )}
+
+            {/* Pagamento confirmado */}
+            {displayStatus === 'PAYMENT_CONFIRMED' && (
+              <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
+                {isWinner
+                  ? 'Pagamento confirmado pelo vendedor. Entre em contato para combinar a entrega.'
+                  : 'Pagamento confirmado. Combine a entrega com o comprador.'}
+              </div>
+            )}
+
+            {/* Pagamento contestado */}
+            {displayStatus === 'PAYMENT_DISPUTED' && (
+              <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                {isWinner
+                  ? 'O vendedor não identificou seu pagamento. Entre em contato com o suporte.'
+                  : 'Você contestou o pagamento. O suporte foi notificado.'}
               </div>
             )}
 

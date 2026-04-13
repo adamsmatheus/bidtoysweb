@@ -7,6 +7,9 @@ export type AuctionStatus =
   | 'ACTIVE'
   | 'FINISHED_WITH_WINNER'
   | 'FINISHED_NO_BIDS'
+  | 'PAYMENT_DECLARED'
+  | 'PAYMENT_CONFIRMED'
+  | 'PAYMENT_DISPUTED'
 
 export interface AuctionImageResponse {
   id: string

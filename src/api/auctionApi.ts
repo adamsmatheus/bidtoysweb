@@ -46,4 +46,13 @@ export const auctionApi = {
 
   listWon: (params?: { page?: number; size?: number }) =>
     http.get<PageResponse<AuctionResponse>>('/auctions/won', { params }).then((r) => r.data),
+
+  declarePayment: (id: string) =>
+    http.post<AuctionResponse>(`/auctions/${id}/declare-payment`).then((r) => r.data),
+
+  confirmPayment: (id: string) =>
+    http.post<AuctionResponse>(`/auctions/${id}/confirm-payment`).then((r) => r.data),
+
+  disputePayment: (id: string) =>
+    http.post<AuctionResponse>(`/auctions/${id}/dispute-payment`).then((r) => r.data),
 }

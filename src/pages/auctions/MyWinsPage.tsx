@@ -6,10 +6,18 @@ import type { AuctionResponse } from '@/types/auction'
 
 type FilterTab = 'todos' | 'ativos' | 'encerrados'
 
+const PAYMENT_STATUS_CONFIG: Record<string, { label: string; dotClass: string; statusClass: string; chipClass: string }> = {
+  FINISHED_WITH_WINNER: { label: 'Aguardando pagamento', dotClass: 'bg-yellow-400', statusClass: 'text-yellow-700', chipClass: 'bg-yellow-100 text-yellow-800' },
+  PAYMENT_DECLARED:     { label: 'Pagamento declarado',  dotClass: 'bg-blue-400',   statusClass: 'text-blue-700',   chipClass: 'bg-blue-100 text-blue-800' },
+  PAYMENT_CONFIRMED:    { label: 'Pagamento confirmado', dotClass: 'bg-green-400',  statusClass: 'text-green-700',  chipClass: 'bg-green-100 text-green-800' },
+  PAYMENT_DISPUTED:     { label: 'Pagamento contestado', dotClass: 'bg-red-400',    statusClass: 'text-red-700',    chipClass: 'bg-red-100 text-red-800' },
+}
+
 function WinCard({ auction }: { auction: AuctionResponse }) {
   const coverImage = auction.images.find((img) => img.position === 0) ?? auction.images[0]
   const isActive = auction.status === 'ACTIVE'
   const isFinished = auction.status === 'FINISHED_WITH_WINNER'
+  const paymentConfig = PAYMENT_STATUS_CONFIG[auction.status]
 
   let statusLabel = ''
   let statusClass = ''
@@ -21,6 +29,10 @@ function WinCard({ auction }: { auction: AuctionResponse }) {
     statusClass = 'text-tertiary'
     dotClass = 'bg-tertiary-fixed-dim'
     dotPing = true
+  } else if (paymentConfig) {
+    statusLabel = paymentConfig.label
+    statusClass = paymentConfig.statusClass
+    dotClass = paymentConfig.dotClass
   } else if (isFinished) {
     statusLabel = 'Arremate Concluído'
     statusClass = 'text-outline'
@@ -52,7 +64,12 @@ function WinCard({ auction }: { auction: AuctionResponse }) {
               Ao Vivo
             </span>
           )}
-          {isFinished && (
+          {paymentConfig && (
+            <span className={`${paymentConfig.chipClass} text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-sm`}>
+              {paymentConfig.label}
+            </span>
+          )}
+          {isFinished && !paymentConfig && (
             <span className="bg-surface-container text-on-surface-variant text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
               Encerrado
             </span>
@@ -91,10 +108,12 @@ function WinCard({ auction }: { auction: AuctionResponse }) {
         className={`w-full py-3.5 rounded-full font-bold text-sm text-center transition-all active:scale-95 ${
           isActive
             ? 'bg-on-surface text-surface'
+            : auction.status === 'FINISHED_WITH_WINNER'
+            ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-500'
             : 'bg-surface-container-high text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container'
         }`}
       >
-        {isActive ? 'Aumentar Lance' : 'Ver Detalhes'}
+        {isActive ? 'Aumentar Lance' : auction.status === 'FINISHED_WITH_WINNER' ? 'Realizar pagamento' : 'Ver Detalhes'}
       </Link>
     </div>
   )
@@ -111,9 +130,11 @@ export function MyWinsPage() {
 
   const allAuctions = data?.content ?? []
 
+  const FINISHED_STATUSES = ['FINISHED_WITH_WINNER', 'PAYMENT_DECLARED', 'PAYMENT_CONFIRMED', 'PAYMENT_DISPUTED']
+
   const filtered = allAuctions.filter((a) => {
     if (filter === 'ativos') return a.status === 'ACTIVE'
-    if (filter === 'encerrados') return a.status === 'FINISHED_WITH_WINNER'
+    if (filter === 'encerrados') return FINISHED_STATUSES.includes(a.status)
     return true
   })
 

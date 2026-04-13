@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { Navbar } from '@/components/Navbar'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
+import { useAuthStore } from '@/store/authStore'
 
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
@@ -16,6 +17,11 @@ import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
 import { PendingAuctionsPage } from '@/pages/admin/PendingAuctionsPage'
 import { AuctionReviewPage } from '@/pages/admin/AuctionReviewPage'
+
+function RootRedirect() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
+  return <Navigate to={isAuthenticated ? '/auctions' : '/login'} replace />
+}
 
 export function AppRouter() {
   return (
@@ -48,8 +54,8 @@ export function AppRouter() {
           </Route>
 
           {/* Default */}
-          <Route path="/" element={<Navigate to="/auctions" replace />} />
-          <Route path="*" element={<Navigate to="/auctions" replace />} />
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="*" element={<RootRedirect />} />
         </Routes>
       </main>
     </>

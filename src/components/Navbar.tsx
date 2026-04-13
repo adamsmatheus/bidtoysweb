@@ -1,11 +1,15 @@
 import { Link, NavLink } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useAuth'
+import { useNotificationSocket } from '@/hooks/useNotificationSocket'
+import { NotificationDropdown } from '@/components/NotificationDropdown'
 
 export function Navbar() {
-  const { name, isAdmin, isAuthenticated } = useAuthStore()
+  const { name, userId, isAdmin, isAuthenticated } = useAuthStore()
   const logout = useLogout()
   const auth = isAuthenticated()
+
+  useNotificationSocket(auth ? userId : null)
 
   return (
     <header className="sticky top-0 w-full z-50 bg-white/80 backdrop-blur-xl shadow-sm">
@@ -16,7 +20,7 @@ export function Navbar() {
             <img
               src="/palavra.png"
               alt="BidToys"
-              className="h-10 w-auto object-contain"
+              className="h-16 w-auto object-contain"
             />
           </Link>
 
@@ -75,9 +79,7 @@ export function Navbar() {
 
         {/* Trailing actions */}
         <div className="flex items-center gap-3">
-          <button className="p-2 rounded-full hover:bg-surface-container transition-colors">
-            <span className="material-symbols-outlined text-on-surface-variant">notifications</span>
-          </button>
+          {auth && <NotificationDropdown />}
 
           {auth ? (
             <div className="flex items-center gap-3">

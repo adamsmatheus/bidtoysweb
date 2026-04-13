@@ -18,8 +18,8 @@ export function AuctionListPage() {
   const [selectedSellerId, setSelectedSellerId] = useState<string | undefined>(undefined)
 
   const { data: activeCompanies } = useQuery({
-    queryKey: ['companies-all'],
-    queryFn: () => companyApi.listAll(),
+    queryKey: ['companies-active'],
+    queryFn: () => companyApi.listActive(),
   })
 
   // Busca leilões ativos para calcular contagens por empresa
