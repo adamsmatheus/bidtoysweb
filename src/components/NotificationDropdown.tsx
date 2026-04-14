@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotificationStore } from '@/store/notificationStore'
+import { notificationApi } from '@/api/notificationApi'
 import type { AppNotification, AppNotificationType } from '@/types/notification'
 
 const ICON: Record<AppNotificationType, string> = {
@@ -33,6 +34,7 @@ function NotificationItem({ notification, onClose }: { notification: AppNotifica
 
   function handleClick() {
     markAsRead(notification.id)
+    notificationApi.markRead(notification.id).catch(() => {})
     onClose()
     navigate(`/auctions/${notification.auctionId}`)
   }
@@ -98,7 +100,10 @@ export function NotificationDropdown() {
             <span className="text-sm font-semibold text-on-surface">Notificações</span>
             {unreadCount > 0 && (
               <button
-                onClick={markAllAsRead}
+                onClick={() => {
+                  markAllAsRead()
+                  notificationApi.markAllRead().catch(() => {})
+                }}
                 className="text-xs text-primary font-semibold hover:underline"
               >
                 Marcar todas como lidas

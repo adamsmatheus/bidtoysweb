@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { auctionApi } from '@/api/auctionApi'
 import { useAuthStore } from '@/store/authStore'
 import type { AuctionResponse, AuctionStatus } from '@/types/auction'
@@ -24,13 +24,24 @@ const STATUS_BADGE: Record<AuctionStatus, { label: string; className: string }> 
   ACTIVE:               { label: 'Ativo',                className: 'bg-tertiary-container text-on-tertiary-container' },
   FINISHED_WITH_WINNER: { label: 'Encerrado',            className: 'bg-on-surface text-surface' },
   FINISHED_NO_BIDS:     { label: 'Sem lances',           className: 'bg-surface-container-high text-on-surface-variant' },
+  PAYMENT_DECLARED:     { label: 'Pag. declarado',       className: 'bg-secondary-container text-on-secondary-container' },
+  PAYMENT_CONFIRMED:    { label: 'Pag. confirmado',      className: 'bg-primary-container text-on-primary-container' },
+  PAYMENT_DISPUTED:     { label: 'Pag. contestado',      className: 'bg-error-container text-on-error-container' },
 }
 
 function MyAuctionCard({ auction }: { auction: AuctionResponse }) {
+  const queryClient = useQueryClient()
   const coverImage = auction.images.find((img) => img.position === 0) ?? auction.images[0]
   const badge = STATUS_BADGE[auction.status]
   const isDraft = auction.status === 'DRAFT'
+  const isRejected = auction.status === 'REJECTED'
+  const isSubmittable = isDraft || isRejected
   const isFinished = auction.status === 'FINISHED_WITH_WINNER' || auction.status === 'FINISHED_NO_BIDS'
+
+  const submitMutation = useMutation({
+    mutationFn: () => auctionApi.submit(auction.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-auctions'] }),
+  })
 
   return (
     <div className={`group bg-surface-container-lowest rounded-2xl p-5 shadow-sm ring-1 ring-outline-variant/10 flex flex-col transition-all hover:-translate-y-2 hover:shadow-xl hover:shadow-primary/5 ${isFinished ? 'opacity-80 hover:opacity-100' : ''}`}>
@@ -65,8 +76,8 @@ function MyAuctionCard({ auction }: { auction: AuctionResponse }) {
       </div>
 
       {/* Footer */}
-      <div className="flex justify-between items-end pt-4 border-t border-surface-container-high">
-        <div>
+      <div className="pt-4 border-t border-surface-container-high">
+        <div className="mb-3">
           <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
             {auction.status === 'ACTIVE' ? 'Lance Atual' : 'Preço Inicial'}
           </p>
@@ -77,28 +88,40 @@ function MyAuctionCard({ auction }: { auction: AuctionResponse }) {
           </p>
         </div>
 
-        {isDraft ? (
-          <Link
-            to={`/auctions/${auction.id}/edit`}
-            className="p-3 rounded-full text-on-primary active:scale-90 transition-all"
-            style={{ background: 'linear-gradient(135deg, #0050d4 0%, #7b9cff 100%)' }}
-          >
-            <span className="material-symbols-outlined text-sm">edit_square</span>
-          </Link>
+        {isSubmittable ? (
+          <div className="flex gap-2">
+            <Link
+              to={`/auctions/${auction.id}/edit`}
+              className="p-3 rounded-full bg-surface-container-high text-on-surface-variant active:scale-90 transition-all hover:bg-surface-container-highest"
+            >
+              <span className="material-symbols-outlined text-sm">edit_square</span>
+            </Link>
+            <button
+              onClick={() => submitMutation.mutate()}
+              disabled={submitMutation.isPending}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full font-bold text-xs text-on-primary active:scale-95 transition-all disabled:opacity-60"
+              style={{ background: 'linear-gradient(135deg, #0050d4 0%, #7b9cff 100%)' }}
+            >
+              <span className="material-symbols-outlined text-sm">send</span>
+              {submitMutation.isPending ? 'Enviando...' : isRejected ? 'Reenviar para aprovação' : 'Enviar para aprovação'}
+            </button>
+          </div>
         ) : isFinished ? (
           <Link
             to={`/auctions/${auction.id}`}
-            className="bg-primary-container text-on-primary-container font-bold px-4 py-2 rounded-full text-xs active:scale-90 transition-all"
+            className="block text-center bg-primary-container text-on-primary-container font-bold px-4 py-2 rounded-full text-xs active:scale-90 transition-all"
           >
             Ver detalhes
           </Link>
         ) : (
-          <Link
-            to={`/auctions/${auction.id}`}
-            className="bg-surface-container-high text-on-surface p-3 rounded-full active:scale-90 transition-all hover:bg-surface-container-highest"
-          >
-            <span className="material-symbols-outlined text-sm">visibility</span>
-          </Link>
+          <div className="flex justify-end">
+            <Link
+              to={`/auctions/${auction.id}`}
+              className="bg-surface-container-high text-on-surface p-3 rounded-full active:scale-90 transition-all hover:bg-surface-container-highest"
+            >
+              <span className="material-symbols-outlined text-sm">visibility</span>
+            </Link>
+          </div>
         )}
       </div>
     </div>

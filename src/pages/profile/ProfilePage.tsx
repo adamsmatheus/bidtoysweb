@@ -240,7 +240,7 @@ export function ProfilePage() {
             )}
           </div>
           <div>
-            <label className="label">Chave PIX</label>
+            <label className="label">Chave PIX {!company && <span className="text-red-500">*</span>}</label>
             <input
               type="text"
               className="input"
@@ -248,9 +248,12 @@ export function ProfilePage() {
               onChange={(e) => setCompanyForm((p) => ({ ...p, pixKey: e.target.value }))}
               placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"
               maxLength={150}
+              required={!company}
             />
             <p className="text-xs text-gray-400 mt-1">
-              Sua chave PIX será enviada ao vencedor pelo WhatsApp para pagamento.
+              {!company
+                ? 'Obrigatório. Será exibida ao vencedor para realizar o pagamento via PIX.'
+                : 'Sua chave PIX será exibida ao vencedor para realizar o pagamento via PIX.'}
             </p>
           </div>
 

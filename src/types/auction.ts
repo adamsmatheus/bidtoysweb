@@ -21,6 +21,7 @@ export interface AuctionCompany {
   id: string
   name: string
   logoUrl: string | null
+  pixKey: string | null
 }
 
 export interface AuctionResponse {

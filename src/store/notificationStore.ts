@@ -6,6 +6,7 @@ interface NotificationState {
   notifications: AppNotification[]
   unreadCount: number
   addNotification: (msg: UserNotificationMessage) => void
+  setNotifications: (list: AppNotification[]) => void
   markAsRead: (id: string) => void
   markAllAsRead: () => void
   clearAll: () => void
@@ -18,8 +19,12 @@ export const useNotificationStore = create<NotificationState>()(
       unreadCount: 0,
 
       addNotification: (msg) => {
+        const existing = get().notifications
+        // Evita duplicatas caso a notificação já tenha chegado via fetch inicial
+        if (msg.id && existing.some((n) => n.id === msg.id)) return
+
         const notification: AppNotification = {
-          id: crypto.randomUUID(),
+          id: msg.id ?? crypto.randomUUID(),
           type: msg.type,
           title: msg.title,
           message: msg.message,
@@ -27,8 +32,12 @@ export const useNotificationStore = create<NotificationState>()(
           read: false,
           createdAt: msg.createdAt ?? new Date().toISOString(),
         }
-        const updated = [notification, ...get().notifications].slice(0, 50)
+        const updated = [notification, ...existing].slice(0, 50)
         set({ notifications: updated, unreadCount: updated.filter((n) => !n.read).length })
+      },
+
+      setNotifications: (list) => {
+        set({ notifications: list, unreadCount: list.filter((n) => !n.read).length })
       },
 
       markAsRead: (id) => {

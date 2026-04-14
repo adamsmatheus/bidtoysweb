@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { QRCodeSVG } from 'qrcode.react'
 import { auctionApi } from '@/api/auctionApi'
 import { bidApi } from '@/api/bidApi'
 import { useAuctionSocket } from '@/hooks/useAuctionSocket'
@@ -10,6 +11,60 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { CountdownTimer } from '@/components/CountdownTimer'
 import { BidForm } from '@/components/BidForm'
 import { formatBRL } from '@/utils/currency'
+import { buildPixPayload } from '@/utils/pixPayload'
+
+function PixPaymentBlock({ pixKey, sellerName, amount }: { pixKey: string; sellerName: string; amount: number }) {
+  const [copied, setCopied] = useState(false)
+  const payload = buildPixPayload(pixKey, sellerName, amount)
+
+  function copyKey() {
+    navigator.clipboard.writeText(pixKey)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="rounded-xl border border-primary-200 bg-primary-50 p-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="material-symbols-outlined text-primary-600 text-lg">qr_code_2</span>
+        <p className="text-sm font-semibold text-primary-800">Pagamento via PIX</p>
+      </div>
+
+      <div className="flex justify-center">
+        <div className="bg-white p-3 rounded-xl shadow-sm inline-block">
+          <QRCodeSVG value={payload} size={180} level="M" />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[10px] font-bold text-primary-600 uppercase tracking-wider mb-1">Valor</p>
+        <p className="text-xl font-black text-primary-800">{formatBRL(amount)}</p>
+      </div>
+
+      <div>
+        <p className="text-[10px] font-bold text-primary-600 uppercase tracking-wider mb-1">Chave PIX</p>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 text-xs bg-white border border-primary-200 rounded-lg px-3 py-2 text-on-surface break-all font-mono">
+            {pixKey}
+          </code>
+          <button
+            onClick={copyKey}
+            className="p-2 rounded-lg bg-white border border-primary-200 hover:bg-primary-100 transition-colors shrink-0"
+            title="Copiar chave PIX"
+          >
+            <span className="material-symbols-outlined text-sm text-primary-700">
+              {copied ? 'check' : 'content_copy'}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <p className="text-[10px] text-primary-600">
+        Escaneie o QR Code ou copie a chave e pague pelo seu aplicativo bancário. Após o pagamento, clique em "Confirmar que realizei o pagamento".
+      </p>
+    </div>
+  )
+}
 
 export function AuctionDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -238,10 +293,18 @@ export function AuctionDetailPage() {
 
             {/* Vencedor declara pagamento */}
             {displayStatus === 'FINISHED_WITH_WINNER' && isWinner && (
-              <div className="space-y-2 pt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-500">
-                  Realize o pagamento via PIX e clique abaixo para avisar o vendedor.
-                </p>
+              <div className="space-y-3 pt-2 border-t border-gray-100">
+                {auction.company?.pixKey ? (
+                  <PixPaymentBlock
+                    pixKey={auction.company.pixKey}
+                    sellerName={auction.sellerName}
+                    amount={displayPrice}
+                  />
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    Realize o pagamento via PIX e clique abaixo para avisar o vendedor.
+                  </p>
+                )}
                 <button
                   className="btn-primary w-full btn-sm"
                   onClick={() => declarePaymentMutation.mutate()}
@@ -254,10 +317,19 @@ export function AuctionDetailPage() {
 
             {/* Status: pagamento declarado */}
             {displayStatus === 'PAYMENT_DECLARED' && (
-              <div className="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
-                {isWinner
-                  ? 'Pagamento declarado. Aguardando confirmação do vendedor.'
-                  : 'O vencedor declarou que realizou o pagamento. Verifique seu extrato.'}
+              <div className="space-y-3">
+                <div className="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+                  {isWinner
+                    ? 'Pagamento declarado. Aguardando confirmação do vendedor.'
+                    : 'O vencedor declarou que realizou o pagamento. Verifique seu extrato.'}
+                </div>
+                {isWinner && auction.company?.pixKey && (
+                  <PixPaymentBlock
+                    pixKey={auction.company.pixKey}
+                    sellerName={auction.sellerName}
+                    amount={displayPrice}
+                  />
+                )}
               </div>
             )}
 

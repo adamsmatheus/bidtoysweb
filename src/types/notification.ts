@@ -14,8 +14,9 @@ export interface AppNotification {
   createdAt: string
 }
 
-// Mensagem recebida via WebSocket
+// Mensagem recebida via WebSocket (o id vem do backend após persistência)
 export interface UserNotificationMessage {
+  id?: string
   type: AppNotificationType
   title: string
   message: string

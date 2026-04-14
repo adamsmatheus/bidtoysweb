@@ -1,15 +1,28 @@
+import { useEffect } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useLogout } from '@/hooks/useAuth'
 import { useNotificationSocket } from '@/hooks/useNotificationSocket'
 import { NotificationDropdown } from '@/components/NotificationDropdown'
+import { notificationApi } from '@/api/notificationApi'
+import { useNotificationStore } from '@/store/notificationStore'
 
 export function Navbar() {
   const { name, userId, isAdmin, isAuthenticated } = useAuthStore()
   const logout = useLogout()
   const auth = isAuthenticated()
+  const { setNotifications, clearAll } = useNotificationStore()
 
   useNotificationSocket(auth ? userId : null)
+
+  // Carrega notificações do servidor ao autenticar
+  useEffect(() => {
+    if (!auth || !userId) {
+      clearAll()
+      return
+    }
+    notificationApi.list().then(setNotifications).catch(() => {})
+  }, [userId, auth])
 
   return (
     <header className="sticky top-0 w-full z-50 bg-white/80 backdrop-blur-xl shadow-sm">
