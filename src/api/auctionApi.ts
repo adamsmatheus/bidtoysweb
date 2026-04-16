@@ -3,14 +3,17 @@ import type {
   AuctionImageResponse,
   AuctionResponse,
   AuctionStatus,
+  BuyerSummaryResponse,
   CreateAuctionRequest,
   UpdateAuctionRequest,
   CancelAuctionRequest,
+  ShipmentStatus,
+  UpdateShipmentStatusRequest,
 } from '@/types/auction'
 import type { PageResponse } from '@/types/bid'
 
 export const auctionApi = {
-  list: (params?: { status?: AuctionStatus; page?: number; size?: number; sellerId?: string }) =>
+  list: (params?: { status?: AuctionStatus; page?: number; size?: number; sellerId?: string; shipmentStatus?: ShipmentStatus }) =>
     http.get<PageResponse<AuctionResponse>>('/auctions', { params }).then((r) => r.data),
 
   get: (id: string) =>
@@ -47,12 +50,18 @@ export const auctionApi = {
   listWon: (params?: { page?: number; size?: number }) =>
     http.get<PageResponse<AuctionResponse>>('/auctions/won', { params }).then((r) => r.data),
 
-  declarePayment: (id: string) =>
-    http.post<AuctionResponse>(`/auctions/${id}/declare-payment`).then((r) => r.data),
+  listMyBuyers: () =>
+    http.get<BuyerSummaryResponse[]>('/auctions/my-buyers').then((r) => r.data),
+
+  declarePayment: (id: string, holdShipment: boolean) =>
+    http.post<AuctionResponse>(`/auctions/${id}/declare-payment`, { holdShipment }).then((r) => r.data),
 
   confirmPayment: (id: string) =>
     http.post<AuctionResponse>(`/auctions/${id}/confirm-payment`).then((r) => r.data),
 
   disputePayment: (id: string) =>
     http.post<AuctionResponse>(`/auctions/${id}/dispute-payment`).then((r) => r.data),
+
+  updateShipmentStatus: (id: string, data: UpdateShipmentStatusRequest) =>
+    http.patch<AuctionResponse>(`/auctions/${id}/shipment-status`, data).then((r) => r.data),
 }

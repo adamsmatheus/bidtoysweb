@@ -3,16 +3,28 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { auctionApi } from '@/api/auctionApi'
 import { useAuthStore } from '@/store/authStore'
-import type { AuctionResponse, AuctionStatus } from '@/types/auction'
+import type { AuctionResponse, AuctionStatus, ShipmentStatus } from '@/types/auction'
 
-const STATUS_OPTIONS: { value: AuctionStatus | ''; label: string }[] = [
+const AUCTION_STATUS_OPTIONS: { value: AuctionStatus | ''; label: string }[] = [
   { value: '', label: 'Todos' },
   { value: 'DRAFT', label: 'Rascunhos' },
-  { value: 'PENDING_APPROVAL', label: 'Aguardando aprovação' },
+  { value: 'PENDING_APPROVAL', label: 'Aguard. aprovação' },
   { value: 'REJECTED', label: 'Rejeitados' },
   { value: 'READY_TO_START', label: 'Prontos' },
   { value: 'ACTIVE', label: 'Ativos' },
   { value: 'FINISHED_WITH_WINNER', label: 'Encerrados' },
+]
+
+const PAYMENT_STATUS_OPTIONS: { value: AuctionStatus; label: string; dotClass: string }[] = [
+  { value: 'PAYMENT_DECLARED',  label: 'Pag. declarado',  dotClass: 'bg-yellow-400' },
+  { value: 'PAYMENT_CONFIRMED', label: 'Pag. confirmado', dotClass: 'bg-green-400' },
+  { value: 'PAYMENT_DISPUTED',  label: 'Pag. contestado', dotClass: 'bg-red-400' },
+]
+
+const SHIPMENT_STATUS_OPTIONS: { value: ShipmentStatus; label: string; dotClass: string }[] = [
+  { value: 'PENDING',   label: 'Aguard. envio', dotClass: 'bg-gray-400' },
+  { value: 'PREPARING', label: 'Preparando',    dotClass: 'bg-yellow-400' },
+  { value: 'SHIPPED',   label: 'Enviado',       dotClass: 'bg-green-400' },
 ]
 
 const STATUS_BADGE: Record<AuctionStatus, { label: string; className: string }> = {
@@ -131,11 +143,30 @@ function MyAuctionCard({ auction }: { auction: AuctionResponse }) {
 export function MyAuctionsPage() {
   const { userId } = useAuthStore()
   const [status, setStatus] = useState<AuctionStatus | ''>('')
+  const [shipmentStatus, setShipmentStatus] = useState<ShipmentStatus | ''>('')
   const [page, setPage] = useState(0)
 
+  function selectStatus(value: AuctionStatus | '') {
+    setStatus(value)
+    setShipmentStatus('')
+    setPage(0)
+  }
+
+  function selectShipmentStatus(value: ShipmentStatus | '') {
+    setShipmentStatus(value)
+    setStatus('')
+    setPage(0)
+  }
+
   const { data, isLoading } = useQuery({
-    queryKey: ['my-auctions', status, page, userId],
-    queryFn: () => auctionApi.list({ status: status || undefined, page, size: 12, sellerId: userId ?? undefined }),
+    queryKey: ['my-auctions', status, shipmentStatus, page, userId],
+    queryFn: () => auctionApi.list({
+      status: status || undefined,
+      shipmentStatus: shipmentStatus || undefined,
+      page,
+      size: 12,
+      sellerId: userId ?? undefined,
+    }),
     enabled: !!userId,
   })
 
@@ -164,26 +195,64 @@ export function MyAuctionsPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="mb-10 overflow-x-auto no-scrollbar -mx-6 px-6">
-        <div className="flex items-center gap-2 min-w-max">
-          {STATUS_OPTIONS.map((opt) => {
-            const isActive = opt.value === 'ACTIVE'
-            return (
-              <button
-                key={opt.value}
-                onClick={() => { setStatus(opt.value); setPage(0) }}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-                  status === opt.value
-                    ? isActive
-                      ? 'bg-tertiary-container text-on-tertiary-container font-bold'
-                      : 'bg-on-surface text-surface font-bold'
-                    : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
-                }`}
-              >
-                {opt.label}
-              </button>
-            )
-          })}
+      <div className="mb-10 space-y-3">
+        {/* Status do leilão */}
+        <div className="flex flex-wrap items-center gap-2">
+          {AUCTION_STATUS_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => selectStatus(opt.value)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                status === opt.value && !shipmentStatus
+                  ? opt.value === 'ACTIVE'
+                    ? 'bg-tertiary-container text-on-tertiary-container font-bold'
+                    : 'bg-on-surface text-surface font-bold'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Separador + Pagamentos */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-outline uppercase tracking-wider pr-1">Pagamento</span>
+          <div className="w-px h-4 bg-outline-variant/40" />
+          {PAYMENT_STATUS_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => selectStatus(opt.value)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                status === opt.value && !shipmentStatus
+                  ? 'bg-on-surface text-surface font-bold'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dotClass}`} />
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Separador + Envio */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-outline uppercase tracking-wider pr-1">Envio</span>
+          <div className="w-px h-4 bg-outline-variant/40" />
+          {SHIPMENT_STATUS_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => selectShipmentStatus(shipmentStatus === opt.value ? '' : opt.value)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                shipmentStatus === opt.value
+                  ? 'bg-on-surface text-surface font-bold'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dotClass}`} />
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 

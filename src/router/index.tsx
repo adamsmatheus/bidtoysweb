@@ -12,6 +12,7 @@ import { AuctionListPage } from '@/pages/auctions/AuctionListPage'
 import { AuctionDetailPage } from '@/pages/auctions/AuctionDetailPage'
 import { CreateEditAuctionPage } from '@/pages/auctions/CreateEditAuctionPage'
 import { MyAuctionsPage } from '@/pages/auctions/MyAuctionsPage'
+import { MyBuyersPage } from '@/pages/auctions/MyBuyersPage'
 import { MyWinsPage } from '@/pages/auctions/MyWinsPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
@@ -42,6 +43,7 @@ export function AppRouter() {
             <Route path="/auctions/new" element={<CreateEditAuctionPage />} />
             <Route path="/auctions/:id/edit" element={<CreateEditAuctionPage />} />
             <Route path="/my-auctions" element={<MyAuctionsPage />} />
+            <Route path="/my-buyers" element={<MyBuyersPage />} />
             <Route path="/my-wins" element={<MyWinsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>

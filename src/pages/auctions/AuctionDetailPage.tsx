@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
@@ -12,6 +12,7 @@ import { CountdownTimer } from '@/components/CountdownTimer'
 import { BidForm } from '@/components/BidForm'
 import { formatBRL } from '@/utils/currency'
 import { buildPixPayload } from '@/utils/pixPayload'
+import type { ShipmentStatus } from '@/types/auction'
 
 function PixPaymentBlock({ pixKey, sellerName, amount }: { pixKey: string; sellerName: string; amount: number }) {
   const [copied, setCopied] = useState(false)
@@ -74,6 +75,10 @@ export function AuctionDetailPage() {
   const { setLiveAuction, currentPrice, nextMinimumBid, endsAt, isFinished, status: liveStatus, winnerUserId, reset } = useAuctionStore()
 
   const [selectedImage, setSelectedImage] = useState(0)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [holdShipment, setHoldShipment] = useState(false)
+  const [trackingCodeInput, setTrackingCodeInput] = useState('')
+  const trackingRef = useRef<HTMLInputElement>(null)
 
   const TRANSITIONAL_STATUSES = ['PENDING_APPROVAL', 'READY_TO_START']
 
@@ -127,18 +132,46 @@ export function AuctionDetailPage() {
   })
 
   const declarePaymentMutation = useMutation({
-    mutationFn: () => auctionApi.declarePayment(id!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auction', id] }),
+    mutationFn: (holdShipmentValue: boolean) => auctionApi.declarePayment(id!, holdShipmentValue),
+    onSuccess: () => {
+      setShowPaymentModal(false)
+      setHoldShipment(false)
+      queryClient.invalidateQueries({ queryKey: ['auction', id] })
+      queryClient.invalidateQueries({ queryKey: ['my-auctions'] })
+      queryClient.invalidateQueries({ queryKey: ['my-wins'] })
+    },
   })
 
   const confirmPaymentMutation = useMutation({
     mutationFn: () => auctionApi.confirmPayment(id!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auction', id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auction', id] })
+      queryClient.invalidateQueries({ queryKey: ['my-auctions'] })
+      queryClient.invalidateQueries({ queryKey: ['my-wins'] })
+    },
   })
 
   const disputePaymentMutation = useMutation({
     mutationFn: () => auctionApi.disputePayment(id!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auction', id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auction', id] })
+      queryClient.invalidateQueries({ queryKey: ['my-auctions'] })
+      queryClient.invalidateQueries({ queryKey: ['my-wins'] })
+    },
+  })
+
+  const updateShipmentMutation = useMutation({
+    mutationFn: (newStatus: ShipmentStatus) =>
+      auctionApi.updateShipmentStatus(id!, {
+        shipmentStatus: newStatus,
+        trackingCode: trackingCodeInput.trim() || undefined,
+      }),
+    onSuccess: () => {
+      setTrackingCodeInput('')
+      queryClient.invalidateQueries({ queryKey: ['auction', id] })
+      queryClient.invalidateQueries({ queryKey: ['my-auctions'] })
+      queryClient.invalidateQueries({ queryKey: ['my-buyers'] })
+    },
   })
 
   if (isLoading) {
@@ -307,10 +340,10 @@ export function AuctionDetailPage() {
                 )}
                 <button
                   className="btn-primary w-full btn-sm"
-                  onClick={() => declarePaymentMutation.mutate()}
+                  onClick={() => setShowPaymentModal(true)}
                   disabled={declarePaymentMutation.isPending}
                 >
-                  {declarePaymentMutation.isPending ? 'Aguarde...' : 'Confirmar que realizei o pagamento'}
+                  Confirmar que realizei o pagamento
                 </button>
               </div>
             )}
@@ -323,6 +356,16 @@ export function AuctionDetailPage() {
                     ? 'Pagamento declarado. Aguardando confirmação do vendedor.'
                     : 'O vencedor declarou que realizou o pagamento. Verifique seu extrato.'}
                 </div>
+                {auction.holdShipment && (
+                  <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-blue-600">inventory_2</span>
+                    <span>
+                      {isWinner
+                        ? 'Você optou por guardar o produto para envio futuro.'
+                        : 'O comprador optou por guardar o produto para envio futuro.'}
+                    </span>
+                  </div>
+                )}
                 {isWinner && auction.company?.pixKey && (
                   <PixPaymentBlock
                     pixKey={auction.company.pixKey}
@@ -353,12 +396,91 @@ export function AuctionDetailPage() {
               </div>
             )}
 
-            {/* Pagamento confirmado */}
+            {/* Pagamento confirmado + seção de envio */}
             {displayStatus === 'PAYMENT_CONFIRMED' && (
-              <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
-                {isWinner
-                  ? 'Pagamento confirmado pelo vendedor. Entre em contato para combinar a entrega.'
-                  : 'Pagamento confirmado. Combine a entrega com o comprador.'}
+              <div className="space-y-3">
+                <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
+                  {isWinner
+                    ? 'Pagamento confirmado pelo vendedor.'
+                    : 'Pagamento confirmado.'}
+                </div>
+                {auction.holdShipment && (
+                  <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-blue-600">inventory_2</span>
+                    <span>
+                      {isWinner
+                        ? 'Você optou por guardar o produto para envio futuro.'
+                        : 'O comprador optou por guardar o produto para envio futuro.'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Seção de envio */}
+                <div className="rounded-md border border-gray-200 p-3 space-y-3">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Envio</p>
+
+                  {/* Status atual */}
+                  <div className="flex items-center gap-2">
+                    {auction.shipmentStatus === 'SHIPPED' ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-800">
+                        <span className="material-symbols-outlined text-[12px]">local_shipping</span>
+                        Enviado
+                      </span>
+                    ) : auction.shipmentStatus === 'PREPARING' ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                        <span className="material-symbols-outlined text-[12px]">inventory_2</span>
+                        Preparando envio
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+                        <span className="material-symbols-outlined text-[12px]">schedule</span>
+                        Aguardando envio
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Código de rastreio (leitura) */}
+                  {auction.trackingCode && (
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Código de rastreio</p>
+                      <code className="text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1 font-mono text-gray-800 break-all">
+                        {auction.trackingCode}
+                      </code>
+                    </div>
+                  )}
+
+                  {/* Ações do vendedor */}
+                  {isSeller && auction.shipmentStatus !== 'SHIPPED' && (
+                    <div className="space-y-2 pt-1 border-t border-gray-100">
+                      <input
+                        ref={trackingRef}
+                        type="text"
+                        className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition"
+                        placeholder="Código de rastreio (opcional)"
+                        value={trackingCodeInput}
+                        onChange={(e) => setTrackingCodeInput(e.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        {auction.shipmentStatus === 'PENDING' && (
+                          <button
+                            className="flex-1 btn-secondary btn-sm"
+                            onClick={() => updateShipmentMutation.mutate('PREPARING')}
+                            disabled={updateShipmentMutation.isPending}
+                          >
+                            Preparando envio
+                          </button>
+                        )}
+                        <button
+                          className="flex-1 btn-primary btn-sm"
+                          onClick={() => updateShipmentMutation.mutate('SHIPPED')}
+                          disabled={updateShipmentMutation.isPending}
+                        >
+                          {updateShipmentMutation.isPending ? 'Aguarde...' : 'Marcar como enviado'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -456,6 +578,56 @@ export function AuctionDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de confirmação de pagamento */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-primary-600">payments</span>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Confirmar pagamento</h2>
+            </div>
+
+            <p className="text-sm text-gray-600">
+              Ao confirmar, você declara que realizou o pagamento via PIX. O vendedor será notificado para verificar o recebimento.
+            </p>
+
+            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+              <input
+                type="checkbox"
+                className="mt-0.5 w-4 h-4 rounded accent-primary-600"
+                checked={holdShipment}
+                onChange={(e) => setHoldShipment(e.target.checked)}
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-800">Guardar produto para envio futuro</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Marque esta opção se não deseja o envio imediato. O vendedor ficará ciente que o produto deve ser guardado.
+                </p>
+              </div>
+            </label>
+
+            <div className="flex gap-3 pt-1">
+              <button
+                className="flex-1 btn-secondary btn-sm"
+                onClick={() => { setShowPaymentModal(false); setHoldShipment(false) }}
+                disabled={declarePaymentMutation.isPending}
+              >
+                Cancelar
+              </button>
+              <button
+                className="flex-1 btn-primary btn-sm"
+                onClick={() => declarePaymentMutation.mutate(holdShipment)}
+                disabled={declarePaymentMutation.isPending}
+              >
+                {declarePaymentMutation.isPending ? 'Aguarde...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

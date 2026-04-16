@@ -1,3 +1,5 @@
+export type ShipmentStatus = 'PENDING' | 'PREPARING' | 'SHIPPED'
+
 export type AuctionStatus =
   | 'DRAFT'
   | 'PENDING_APPROVAL'
@@ -46,6 +48,9 @@ export interface AuctionResponse {
   images: AuctionImageResponse[]
   company: AuctionCompany | null
   bidCount: number
+  holdShipment: boolean
+  shipmentStatus: ShipmentStatus | null
+  trackingCode: string | null
 }
 
 export interface CreateAuctionRequest {
@@ -66,6 +71,30 @@ export interface UpdateAuctionRequest {
 
 export interface CancelAuctionRequest {
   reason?: string
+}
+
+export interface BuyerAuctionItem {
+  id: string
+  title: string
+  currentPriceAmount: number
+  status: AuctionStatus
+  finishedAt: string | null
+  holdShipment: boolean
+  shipmentStatus: ShipmentStatus | null
+  trackingCode: string | null
+}
+
+export interface UpdateShipmentStatusRequest {
+  shipmentStatus: ShipmentStatus
+  trackingCode?: string
+}
+
+export interface BuyerSummaryResponse {
+  buyerId: string
+  buyerName: string
+  auctionCount: number
+  totalAmount: number
+  auctions: BuyerAuctionItem[]
 }
 
 // WebSocket messages

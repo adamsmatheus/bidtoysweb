@@ -13,6 +13,12 @@ const PAYMENT_STATUS_CONFIG: Record<string, { label: string; dotClass: string; s
   PAYMENT_DISPUTED:     { label: 'Pagamento contestado', dotClass: 'bg-red-400',    statusClass: 'text-red-700',    chipClass: 'bg-red-100 text-red-800' },
 }
 
+const SHIPMENT_STATUS_CHIP: Record<string, { label: string; chipClass: string }> = {
+  PENDING:   { label: 'Aguard. envio',   chipClass: 'bg-gray-100 text-gray-600' },
+  PREPARING: { label: 'Preparando',      chipClass: 'bg-yellow-100 text-yellow-800' },
+  SHIPPED:   { label: 'Enviado',         chipClass: 'bg-green-100 text-green-800' },
+}
+
 function WinCard({ auction }: { auction: AuctionResponse }) {
   const coverImage = auction.images.find((img) => img.position === 0) ?? auction.images[0]
   const isActive = auction.status === 'ACTIVE'
@@ -58,7 +64,7 @@ function WinCard({ auction }: { auction: AuctionResponse }) {
         )}
 
         {/* Status Chip */}
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
           {isActive && (
             <span className="bg-tertiary-container text-on-tertiary-container text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
               Ao Vivo
@@ -72,6 +78,11 @@ function WinCard({ auction }: { auction: AuctionResponse }) {
           {isFinished && !paymentConfig && (
             <span className="bg-surface-container text-on-surface-variant text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
               Encerrado
+            </span>
+          )}
+          {auction.shipmentStatus && (
+            <span className={`${SHIPMENT_STATUS_CHIP[auction.shipmentStatus]?.chipClass ?? ''} text-[10px] font-semibold px-3 py-1 rounded-full shadow-sm`}>
+              {SHIPMENT_STATUS_CHIP[auction.shipmentStatus]?.label}
             </span>
           )}
         </div>

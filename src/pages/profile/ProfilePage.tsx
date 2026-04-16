@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { userApi } from '@/api/userApi'
 import { companyApi } from '@/api/companyApi'
 import { useAuthStore } from '@/store/authStore'
+import { Toast } from '@/components/Toast'
 
 export function ProfilePage() {
   const { userId, setName } = useAuthStore()
@@ -25,6 +26,7 @@ export function ProfilePage() {
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -65,6 +67,7 @@ export function ProfilePage() {
     onSuccess: (updated) => {
       setName(updated.name)
       queryClient.invalidateQueries({ queryKey: ['me'] })
+      setToast({ message: 'Perfil atualizado com sucesso!', type: 'success' })
     },
   })
 
@@ -87,6 +90,7 @@ export function ProfilePage() {
       setCompanyForm((p) => ({ ...p, logoUrl: data.logoUrl ?? '' }))
       queryClient.invalidateQueries({ queryKey: ['my-company'] })
       queryClient.invalidateQueries({ queryKey: ['companies-active'] })
+      setToast({ message: 'Empresa salva com sucesso!', type: 'success' })
     },
   })
 
@@ -104,6 +108,7 @@ export function ProfilePage() {
       setConfirmDelete(false)
       queryClient.invalidateQueries({ queryKey: ['my-company'] })
       queryClient.invalidateQueries({ queryKey: ['companies-active'] })
+      setToast({ message: 'Empresa excluída com sucesso.', type: 'success' })
     },
   })
 
@@ -121,6 +126,13 @@ export function ProfilePage() {
 
   return (
     <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <h1 className="text-2xl font-bold text-gray-900">Meu perfil</h1>
 
       {/* Dados pessoais */}
@@ -160,10 +172,6 @@ export function ProfilePage() {
               placeholder="(11) 99999-9999"
             />
           </div>
-
-          {userMutation.isSuccess && (
-            <p className="text-sm text-green-600">Perfil atualizado!</p>
-          )}
 
           <button type="submit" className="btn-primary" disabled={userMutation.isPending}>
             {userMutation.isPending ? 'Salvando...' : 'Salvar'}
@@ -256,10 +264,6 @@ export function ProfilePage() {
                 : 'Sua chave PIX será exibida ao vencedor para realizar o pagamento via PIX.'}
             </p>
           </div>
-
-          {companyMutation.isSuccess && (
-            <p className="text-sm text-green-600">Empresa salva!</p>
-          )}
 
           {deleteMutation.isError && (
             <p className="text-sm text-red-600">
