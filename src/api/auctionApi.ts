@@ -47,7 +47,7 @@ export const auctionApi = {
   deleteImage: (id: string, imageId: string) =>
     http.delete(`/auctions/${id}/images/${imageId}`),
 
-  listWon: (params?: { page?: number; size?: number }) =>
+  listWon: (params?: { status?: AuctionStatus; page?: number; size?: number }) =>
     http.get<PageResponse<AuctionResponse>>('/auctions/won', { params }).then((r) => r.data),
 
   listMyBuyers: () =>

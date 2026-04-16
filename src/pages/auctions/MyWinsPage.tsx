@@ -2,9 +2,19 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { auctionApi } from '@/api/auctionApi'
-import type { AuctionResponse } from '@/types/auction'
+import type { AuctionResponse, AuctionStatus } from '@/types/auction'
 
-type FilterTab = 'todos' | 'ativos' | 'encerrados'
+const WIN_STATUS_OPTIONS: { value: AuctionStatus | ''; label: string }[] = [
+  { value: '',                      label: 'Todos' },
+  { value: 'ACTIVE',                label: 'Em aberto' },
+  { value: 'FINISHED_WITH_WINNER',  label: 'Aguard. pagamento' },
+]
+
+const PAYMENT_STATUS_OPTIONS: { value: AuctionStatus; label: string; dotClass: string }[] = [
+  { value: 'PAYMENT_DECLARED',  label: 'Pag. declarado',  dotClass: 'bg-yellow-400' },
+  { value: 'PAYMENT_CONFIRMED', label: 'Pag. confirmado', dotClass: 'bg-green-400' },
+  { value: 'PAYMENT_DISPUTED',  label: 'Pag. contestado', dotClass: 'bg-red-400' },
+]
 
 const PAYMENT_STATUS_CONFIG: Record<string, { label: string; dotClass: string; statusClass: string; chipClass: string }> = {
   FINISHED_WITH_WINNER: { label: 'Aguardando pagamento', dotClass: 'bg-yellow-400', statusClass: 'text-yellow-700', chipClass: 'bg-yellow-100 text-yellow-800' },
@@ -131,28 +141,25 @@ function WinCard({ auction }: { auction: AuctionResponse }) {
 }
 
 export function MyWinsPage() {
+  const [status, setStatus] = useState<AuctionStatus | ''>('')
   const [page, setPage] = useState(0)
-  const [filter, setFilter] = useState<FilterTab>('todos')
+
+  function selectStatus(value: AuctionStatus | '') {
+    setStatus(value)
+    setPage(0)
+  }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['my-wins', page],
-    queryFn: () => auctionApi.listWon({ page, size: 24 }),
+    queryKey: ['my-wins', status, page],
+    queryFn: () => auctionApi.listWon({ status: status || undefined, page, size: 24 }),
   })
 
-  const allAuctions = data?.content ?? []
-
-  const FINISHED_STATUSES = ['FINISHED_WITH_WINNER', 'PAYMENT_DECLARED', 'PAYMENT_CONFIRMED', 'PAYMENT_DISPUTED']
-
-  const filtered = allAuctions.filter((a) => {
-    if (filter === 'ativos') return a.status === 'ACTIVE'
-    if (filter === 'encerrados') return FINISHED_STATUSES.includes(a.status)
-    return true
-  })
+  const auctions = data?.content ?? []
 
   return (
     <div className="max-w-screen-2xl mx-auto px-6 py-12 pb-24 md:pb-12">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
         <div className="max-w-2xl">
           <span className="text-primary font-bold tracking-widest uppercase text-xs block mb-2">
             Coleção Pessoal
@@ -164,21 +171,45 @@ export function MyWinsPage() {
             Gerencie suas vitórias e acompanhe o status dos seus itens raros.
           </p>
         </div>
+      </div>
 
-        {/* Filter Tabs */}
-        <div className="flex bg-surface-container-low p-1.5 rounded-full self-start md:self-auto">
-          {(['todos', 'ativos', 'encerrados'] as FilterTab[]).map((tab) => (
+      {/* Filter Tabs */}
+      <div className="mb-10 space-y-3">
+        {/* Status do arremate */}
+        <div className="flex flex-wrap items-center gap-2">
+          {WIN_STATUS_OPTIONS.map((opt) => (
             <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`px-5 py-2 rounded-full text-sm font-semibold capitalize transition-all ${
-                filter === tab
-                  ? 'text-white shadow-md'
-                  : 'text-on-surface-variant hover:bg-surface-container-high'
+              key={opt.value}
+              onClick={() => selectStatus(opt.value)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                status === opt.value
+                  ? opt.value === 'ACTIVE'
+                    ? 'bg-tertiary-container text-on-tertiary-container font-bold'
+                    : 'bg-on-surface text-surface font-bold'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
               }`}
-              style={filter === tab ? { background: 'linear-gradient(135deg, #0050d4 0%, #7b9cff 100%)' } : {}}
             >
-              {tab === 'todos' ? 'Todos' : tab === 'ativos' ? 'Em aberto' : 'Encerrados'}
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Pagamentos */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-outline uppercase tracking-wider pr-1">Pagamento</span>
+          <div className="w-px h-4 bg-outline-variant/40" />
+          {PAYMENT_STATUS_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => selectStatus(status === opt.value ? '' : opt.value)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                status === opt.value
+                  ? 'bg-on-surface text-surface font-bold'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dotClass}`} />
+              {opt.label}
             </button>
           ))}
         </div>
@@ -191,27 +222,29 @@ export function MyWinsPage() {
             <div key={i} className="bg-surface-container-low rounded-2xl aspect-square animate-pulse" />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : auctions.length === 0 ? (
         <div className="text-center py-24">
           <span className="material-symbols-outlined text-6xl text-outline-variant block mb-4">
             shopping_bag
           </span>
           <p className="text-on-surface-variant font-medium text-lg">
-            {filter === 'todos'
+            {!status
               ? 'Você ainda não arrematou nenhum leilão.'
               : 'Nenhum arremate nesta categoria.'}
           </p>
-          <Link
-            to="/auctions"
-            className="inline-block mt-6 px-8 py-4 rounded-full font-bold text-sm text-on-primary"
-            style={{ background: 'linear-gradient(135deg, #0050d4 0%, #7b9cff 100%)' }}
-          >
-            Explorar Leilões
-          </Link>
+          {!status && (
+            <Link
+              to="/auctions"
+              className="inline-block mt-6 px-8 py-4 rounded-full font-bold text-sm text-on-primary"
+              style={{ background: 'linear-gradient(135deg, #0050d4 0%, #7b9cff 100%)' }}
+            >
+              Explorar Leilões
+            </Link>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filtered.map((auction) => (
+          {auctions.map((auction) => (
             <WinCard key={auction.id} auction={auction} />
           ))}
         </div>
