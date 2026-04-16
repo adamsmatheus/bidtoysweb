@@ -4,13 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { auctionApi } from '@/api/auctionApi'
 import type { AuctionResponse, AuctionStatus } from '@/types/auction'
 
-const WIN_STATUS_OPTIONS: { value: AuctionStatus | ''; label: string }[] = [
-  { value: '',                      label: 'Todos' },
-  { value: 'ACTIVE',                label: 'Em aberto' },
-  { value: 'FINISHED_WITH_WINNER',  label: 'Aguard. pagamento' },
-]
-
-const PAYMENT_STATUS_OPTIONS: { value: AuctionStatus; label: string; dotClass: string }[] = [
+const PAYMENT_STATUS_OPTIONS: { value: AuctionStatus | ''; label: string; dotClass?: string }[] = [
+  { value: '',                  label: 'Todos' },
   { value: 'PAYMENT_DECLARED',  label: 'Pag. declarado',  dotClass: 'bg-yellow-400' },
   { value: 'PAYMENT_CONFIRMED', label: 'Pag. confirmado', dotClass: 'bg-green-400' },
   { value: 'PAYMENT_DISPUTED',  label: 'Pag. contestado', dotClass: 'bg-red-400' },
@@ -174,41 +169,19 @@ export function MyWinsPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="mb-10 space-y-3">
-        {/* Status do arremate */}
+      <div className="mb-10">
         <div className="flex flex-wrap items-center gap-2">
-          {WIN_STATUS_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => selectStatus(opt.value)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-                status === opt.value
-                  ? opt.value === 'ACTIVE'
-                    ? 'bg-tertiary-container text-on-tertiary-container font-bold'
-                    : 'bg-on-surface text-surface font-bold'
-                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Pagamentos */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-outline uppercase tracking-wider pr-1">Pagamento</span>
-          <div className="w-px h-4 bg-outline-variant/40" />
           {PAYMENT_STATUS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => selectStatus(status === opt.value ? '' : opt.value)}
+              onClick={() => selectStatus(opt.value)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
                 status === opt.value
                   ? 'bg-on-surface text-surface font-bold'
                   : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dotClass}`} />
+              {opt.dotClass && <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dotClass}`} />}
               {opt.label}
             </button>
           ))}
