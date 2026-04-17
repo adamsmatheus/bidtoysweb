@@ -1,4 +1,4 @@
-export type ShipmentStatus = 'PENDING' | 'PREPARING' | 'SHIPPED'
+export type ShipmentStatus = 'PENDING' | 'DELIVERY_REQUESTED' | 'PREPARING' | 'SHIPPED'
 
 export type AuctionStatus =
   | 'DRAFT'

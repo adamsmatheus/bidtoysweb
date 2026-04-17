@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { auctionApi } from '@/api/auctionApi'
 import type { AuctionResponse, AuctionStatus } from '@/types/auction'
 
@@ -137,19 +137,52 @@ function WinCard({ auction }: { auction: AuctionResponse }) {
 
 export function MyWinsPage() {
   const [status, setStatus] = useState<AuctionStatus | ''>('')
+  const [holdShipment, setHoldShipment] = useState(false)
   const [page, setPage] = useState(0)
 
   function selectStatus(value: AuctionStatus | '') {
     setStatus(value)
+    setHoldShipment(false)
     setPage(0)
   }
 
+  function toggleHoldShipment() {
+    setHoldShipment((prev) => !prev)
+    setStatus('')
+    setPage(0)
+  }
+
+  const queryClient = useQueryClient()
+
   const { data, isLoading } = useQuery({
-    queryKey: ['my-wins', status, page],
-    queryFn: () => auctionApi.listWon({ status: status || undefined, page, size: 24 }),
+    queryKey: ['my-wins', status, holdShipment, page],
+    queryFn: () => auctionApi.listWon({
+      status: status || undefined,
+      holdShipment: holdShipment || undefined,
+      page,
+      size: 24,
+    }),
+  })
+
+  const requestDeliveryMutation = useMutation({
+    mutationFn: (auctionId: string) => auctionApi.requestDelivery(auctionId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-wins'] }),
   })
 
   const auctions = data?.content ?? []
+
+  // Agrupamento por loja (apenas no modo holdShipment)
+  const sellerGroups: { sellerId: string; sellerName: string; company: AuctionResponse['company']; auctions: AuctionResponse[] }[] = []
+  if (holdShipment) {
+    for (const auction of auctions) {
+      const group = sellerGroups.find((g) => g.sellerId === auction.sellerId)
+      if (group) {
+        group.auctions.push(auction)
+      } else {
+        sellerGroups.push({ sellerId: auction.sellerId, sellerName: auction.sellerName, company: auction.company, auctions: [auction] })
+      }
+    }
+  }
 
   return (
     <div className="max-w-screen-2xl mx-auto px-6 py-12 pb-24 md:pb-12">
@@ -169,23 +202,32 @@ export function MyWinsPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="mb-10">
-        <div className="flex flex-wrap items-center gap-2">
-          {PAYMENT_STATUS_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => selectStatus(opt.value)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-                status === opt.value
-                  ? 'bg-on-surface text-surface font-bold'
-                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
-              }`}
-            >
-              {opt.dotClass && <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dotClass}`} />}
-              {opt.label}
-            </button>
-          ))}
-        </div>
+      <div className="mb-10 flex flex-wrap items-center gap-2">
+        {PAYMENT_STATUS_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => selectStatus(opt.value)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+              status === opt.value && !holdShipment
+                ? 'bg-on-surface text-surface font-bold'
+                : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+            }`}
+          >
+            {opt.dotClass && <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dotClass}`} />}
+            {opt.label}
+          </button>
+        ))}
+        <button
+          onClick={toggleHoldShipment}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+            holdShipment
+              ? 'bg-on-surface text-surface font-bold'
+              : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+          }`}
+        >
+          <span className="material-symbols-outlined text-base">schedule_send</span>
+          Envio futuro
+        </button>
       </div>
 
       {/* Cards Grid */}
@@ -201,11 +243,11 @@ export function MyWinsPage() {
             shopping_bag
           </span>
           <p className="text-on-surface-variant font-medium text-lg">
-            {!status
+            {!status && !holdShipment
               ? 'Você ainda não arrematou nenhum leilão.'
               : 'Nenhum arremate nesta categoria.'}
           </p>
-          {!status && (
+          {!status && !holdShipment && (
             <Link
               to="/auctions"
               className="inline-block mt-6 px-8 py-4 rounded-full font-bold text-sm text-on-primary"
@@ -214,6 +256,66 @@ export function MyWinsPage() {
               Explorar Leilões
             </Link>
           )}
+        </div>
+      ) : holdShipment ? (
+        <div className="space-y-10">
+          {sellerGroups.map((group) => {
+            const pendingIds = group.auctions
+              .filter((a) => a.shipmentStatus === 'PENDING' || a.shipmentStatus == null)
+              .map((a) => a.id)
+            return (
+              <div key={group.sellerId}>
+                {/* Cabeçalho da loja */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    {group.company?.logoUrl ? (
+                      <img src={group.company.logoUrl} alt={group.company.name} className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-sm font-bold text-on-primary-container">
+                        {group.sellerName.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-bold text-on-surface">{group.company?.name ?? group.sellerName}</p>
+                      <p className="text-xs text-on-surface-variant">{group.auctions.length} {group.auctions.length === 1 ? 'item' : 'itens'} retidos</p>
+                    </div>
+                  </div>
+                  {pendingIds.length > 0 && (
+                    <button
+                      onClick={() => pendingIds.forEach((id) => requestDeliveryMutation.mutate(id))}
+                      disabled={requestDeliveryMutation.isPending}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-base">local_shipping</span>
+                      Solicitar todos ({pendingIds.length})
+                    </button>
+                  )}
+                </div>
+                {/* Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {group.auctions.map((auction) => (
+                    <div key={auction.id} className="flex flex-col gap-2">
+                      <WinCard auction={auction} />
+                      {(auction.shipmentStatus === 'PENDING' || auction.shipmentStatus == null) && (
+                        <button
+                          onClick={() => requestDeliveryMutation.mutate(auction.id)}
+                          disabled={requestDeliveryMutation.isPending}
+                          className="w-full py-3 rounded-full text-sm font-bold bg-orange-500 text-white hover:bg-orange-600 transition-colors disabled:opacity-50"
+                        >
+                          Solicitar entrega
+                        </button>
+                      )}
+                      {auction.shipmentStatus === 'DELIVERY_REQUESTED' && (
+                        <div className="w-full py-3 rounded-full text-sm font-bold bg-orange-100 text-orange-700 text-center">
+                          Entrega solicitada
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

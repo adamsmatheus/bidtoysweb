@@ -12,10 +12,11 @@ const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   PAYMENT_DISPUTED:     { label: 'Pag. contestado',   className: 'bg-red-100 text-red-800' },
 }
 
-const SHIPMENT_LABEL: Record<string, { label: string; className: string }> = {
-  PENDING:   { label: 'Aguard. envio', className: 'bg-gray-100 text-gray-600' },
-  PREPARING: { label: 'Preparando',   className: 'bg-yellow-100 text-yellow-800' },
-  SHIPPED:   { label: 'Enviado',      className: 'bg-green-100 text-green-800' },
+const SHIPMENT_LABEL: Record<string, { label: string; className: string; highlight?: boolean }> = {
+  PENDING:            { label: 'Aguard. envio',    className: 'bg-gray-100 text-gray-600' },
+  DELIVERY_REQUESTED: { label: 'Envio solicitado', className: 'bg-orange-100 text-orange-700', highlight: true },
+  PREPARING:          { label: 'Preparando',       className: 'bg-yellow-100 text-yellow-800' },
+  SHIPPED:            { label: 'Enviado',           className: 'bg-green-100 text-green-800' },
 }
 
 function BuyerCard({ buyer }: { buyer: BuyerSummaryResponse }) {
@@ -49,11 +50,17 @@ function BuyerCard({ buyer }: { buyer: BuyerSummaryResponse }) {
         <div className="border-t border-gray-100 divide-y divide-gray-50">
           {buyer.auctions.map((auction) => {
             const badge = STATUS_LABEL[auction.status]
+            const shipmentBadge = auction.shipmentStatus ? SHIPMENT_LABEL[auction.shipmentStatus] : null
+            const isDeliveryRequested = auction.shipmentStatus === 'DELIVERY_REQUESTED'
             return (
               <Link
                 key={auction.id}
                 to={`/auctions/${auction.id}`}
-                className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
+                className={`flex items-center justify-between gap-3 px-5 py-3 transition-colors ${
+                  isDeliveryRequested
+                    ? 'bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-400'
+                    : 'hover:bg-gray-50'
+                }`}
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-800 truncate">{auction.title}</p>
@@ -69,9 +76,12 @@ function BuyerCard({ buyer }: { buyer: BuyerSummaryResponse }) {
                         Envio futuro
                       </span>
                     )}
-                    {auction.shipmentStatus && SHIPMENT_LABEL[auction.shipmentStatus] && (
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${SHIPMENT_LABEL[auction.shipmentStatus].className}`}>
-                        {SHIPMENT_LABEL[auction.shipmentStatus].label}
+                    {shipmentBadge && (
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${shipmentBadge.className}`}>
+                        {shipmentBadge.highlight && (
+                          <span className="material-symbols-outlined text-[10px]">local_shipping</span>
+                        )}
+                        {shipmentBadge.label}
                       </span>
                     )}
                     {auction.finishedAt && (

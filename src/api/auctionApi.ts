@@ -47,7 +47,7 @@ export const auctionApi = {
   deleteImage: (id: string, imageId: string) =>
     http.delete(`/auctions/${id}/images/${imageId}`),
 
-  listWon: (params?: { status?: AuctionStatus; page?: number; size?: number }) =>
+  listWon: (params?: { status?: AuctionStatus; holdShipment?: boolean; page?: number; size?: number }) =>
     http.get<PageResponse<AuctionResponse>>('/auctions/won', { params }).then((r) => r.data),
 
   listMyBuyers: () =>
@@ -64,4 +64,7 @@ export const auctionApi = {
 
   updateShipmentStatus: (id: string, data: UpdateShipmentStatusRequest) =>
     http.patch<AuctionResponse>(`/auctions/${id}/shipment-status`, data).then((r) => r.data),
+
+  requestDelivery: (id: string) =>
+    http.post<AuctionResponse>(`/auctions/${id}/request-delivery`).then((r) => r.data),
 }
