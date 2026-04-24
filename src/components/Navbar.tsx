@@ -43,14 +43,14 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 w-full z-50 bg-white/80 backdrop-blur-xl shadow-sm">
-      <div className="flex justify-between items-center h-20 px-6 max-w-screen-2xl mx-auto">
+      <div className="flex justify-between items-center h-[148px] px-6 max-w-screen-2xl mx-auto">
         {/* Logo + Nav */}
         <div className="flex items-center gap-8">
           <Link to="/">
             <img
-              src="/palavra.png"
+              src="/logo.jpg"
               alt="BidToys"
-              className="h-16 w-auto object-contain"
+              className="h-[140px] w-auto object-contain"
             />
           </Link>
 

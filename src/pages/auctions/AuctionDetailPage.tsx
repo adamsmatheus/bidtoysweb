@@ -431,6 +431,11 @@ export function AuctionDetailPage() {
                         <span className="material-symbols-outlined text-[12px]">inventory_2</span>
                         Preparando envio
                       </span>
+                    ) : auction.shipmentStatus === 'DELIVERY_REQUESTED' ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-orange-100 text-orange-800">
+                        <span className="material-symbols-outlined text-[12px]">local_shipping</span>
+                        Envio solicitado
+                      </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
                         <span className="material-symbols-outlined text-[12px]">schedule</span>
@@ -461,7 +466,7 @@ export function AuctionDetailPage() {
                         onChange={(e) => setTrackingCodeInput(e.target.value)}
                       />
                       <div className="flex gap-2">
-                        {auction.shipmentStatus === 'PENDING' && (
+                        {['PENDING', 'DELIVERY_REQUESTED'].includes(auction.shipmentStatus ?? '') && (
                           <button
                             className="flex-1 btn-secondary btn-sm"
                             onClick={() => updateShipmentMutation.mutate('PREPARING')}

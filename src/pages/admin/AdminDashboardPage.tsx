@@ -31,7 +31,7 @@ function SidebarLink({
 
 export function AdminDashboardPage() {
   const { data: pending } = useQuery({
-    queryKey: ['admin-auctions-pending'],
+    queryKey: ['admin-auctions-pending', 0, 1],
     queryFn: () => adminApi.listPending(0, 1),
   })
 

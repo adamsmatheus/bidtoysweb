@@ -5,8 +5,10 @@ import { auctionApi } from '@/api/auctionApi'
 import { companyApi } from '@/api/companyApi'
 import { useAuthStore } from '@/store/authStore'
 import { CurrencyInput } from '@/components/CurrencyInput'
+import { compressImage } from '@/utils/imageCompression'
 
 const MAX_IMAGES = 5
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 const EDITABLE_STATUSES = ['DRAFT', 'REJECTED']
 
 interface StagedFile {
@@ -28,6 +30,8 @@ export function CreateEditAuctionPage() {
   // Fotos selecionadas localmente antes da criação do leilão
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [isCompressing, setIsCompressing] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [showDraftModal, setShowDraftModal] = useState(false)
 
   const { data: existing } = useQuery({
@@ -85,35 +89,7 @@ export function CreateEditAuctionPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      auctionApi.create({
-        title: form.title,
-        description: form.description || undefined,
-        initialPriceAmount: Number(form.initialPriceAmount),
-        minIncrementAmount: Number(form.minIncrementAmount),
-        durationSeconds: Number(form.durationMinutes) * 60,
-      }),
-    onSuccess: async (data) => {
-      queryClient.setQueryData(['auction', data.id], data)
-
-      // Upload das fotos staged em sequência
-      if (stagedFiles.length > 0) {
-        setIsUploading(true)
-        try {
-          for (const staged of stagedFiles) {
-            await auctionApi.uploadImage(data.id, staged.file)
-          }
-          stagedFiles.forEach((s) => URL.revokeObjectURL(s.preview))
-          setStagedFiles([])
-          await queryClient.invalidateQueries({ queryKey: ['auction', data.id] })
-        } finally {
-          setIsUploading(false)
-        }
-      }
-
-      setCreatedId(data.id)
-      setShowDraftModal(true)
-    },
+    mutationFn: (req: Parameters<typeof auctionApi.create>[0]) => auctionApi.create(req),
   })
 
   const uploadMutation = useMutation({
@@ -126,23 +102,77 @@ export function CreateEditAuctionPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auction', activeId] }),
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (hasAuction) {
       updateMutation.mutate()
-    } else {
-      createMutation.mutate()
+      return
+    }
+
+    setUploadError(null)
+    let auctionCreated = false
+    try {
+      const data = await createMutation.mutateAsync({
+        title: form.title,
+        description: form.description || undefined,
+        initialPriceAmount: Number(form.initialPriceAmount),
+        minIncrementAmount: Number(form.minIncrementAmount),
+        durationSeconds: Number(form.durationMinutes) * 60,
+      })
+      auctionCreated = true
+      queryClient.setQueryData(['auction', data.id], data)
+
+      if (stagedFiles.length > 0) {
+        setIsUploading(true)
+        try {
+          for (const staged of stagedFiles) {
+            await auctionApi.uploadImage(data.id, staged.file)
+          }
+          stagedFiles.forEach((s) => URL.revokeObjectURL(s.preview))
+          setStagedFiles([])
+        } finally {
+          setIsUploading(false)
+        }
+      }
+
+      setCreatedId(data.id)
+      setShowDraftModal(true)
+    } catch (err) {
+      if (auctionCreated) {
+        const e = err as { response?: { data?: { message?: string } } }
+        setUploadError(e?.response?.data?.message ?? 'Erro ao enviar foto')
+      }
     }
   }
 
-  // Seleciona foto antes da criação (staged)
-  const handleStagedFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const totalImages = stagedFiles.length
-    if (totalImages >= MAX_IMAGES) return
-    setStagedFiles((prev) => [...prev, { file, preview: URL.createObjectURL(file) }])
+  // Seleciona fotos antes da criação (staged) — suporta múltiplos arquivos
+  const handleStagedFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
+    if (!files.length) return
+
+    const slotsLeft = MAX_IMAGES - stagedFiles.length
+    const toProcess = files.slice(0, slotsLeft)
+
+    setUploadError(null)
+    setIsCompressing(true)
+
+    const results: StagedFile[] = []
+    try {
+      for (const file of toProcess) {
+        const processed = file.size > MAX_FILE_SIZE_BYTES
+          ? await compressImage(file, MAX_FILE_SIZE_BYTES)
+          : file
+        results.push({ file: processed, preview: URL.createObjectURL(processed) })
+      }
+    } catch (err) {
+      setUploadError((err as Error).message)
+    } finally {
+      setIsCompressing(false)
+      if (results.length > 0) {
+        setStagedFiles((prev) => [...prev, ...results])
+      }
+    }
   }
 
   // Remove foto staged
@@ -153,11 +183,36 @@ export function CreateEditAuctionPage() {
     })
   }
 
-  // Upload de foto adicional no modo edição (leilão já existe)
-  const handleUploadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) uploadMutation.mutate(file)
+  // Upload de fotos no modo edição (leilão já existe) — suporta múltiplos arquivos
+  const handleUploadFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
+    if (!files.length) return
+
+    const slotsLeft = MAX_IMAGES - existingImages.length
+    const toProcess = files.slice(0, slotsLeft)
+
+    setUploadError(null)
+
+    for (const file of toProcess) {
+      let processed = file
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        setIsCompressing(true)
+        try {
+          processed = await compressImage(file, MAX_FILE_SIZE_BYTES)
+        } catch (err) {
+          setUploadError((err as Error).message)
+          return
+        } finally {
+          setIsCompressing(false)
+        }
+      }
+      try {
+        await uploadMutation.mutateAsync(processed)
+      } catch {
+        return
+      }
+    }
   }
 
   const canEditImages = hasAuction && !!existing && EDITABLE_STATUSES.includes(existing.status)
@@ -165,7 +220,7 @@ export function CreateEditAuctionPage() {
   const totalImages = existingImages.length + stagedFiles.length
   const canAddMore = totalImages < MAX_IMAGES
 
-  const isPending = createMutation.isPending || isUploading || updateMutation.isPending
+  const isPending = createMutation.isPending || isUploading || isCompressing || updateMutation.isPending
 
   const errorMsg = (() => {
     const err = (createMutation.error ?? updateMutation.error) as { response?: { data?: { message?: string } } } | null
@@ -174,11 +229,13 @@ export function CreateEditAuctionPage() {
 
   const uploadErrorMsg = (() => {
     const err = uploadMutation.error as { response?: { data?: { message?: string } } } | null
-    return err?.response?.data?.message ?? null
+    return err?.response?.data?.message ?? uploadError ?? null
   })()
 
   const buttonText = isPending
-    ? isUploading ? 'Enviando fotos...' : 'Salvando...'
+    ? isCompressing ? 'Comprimindo foto...'
+    : isUploading   ? 'Enviando fotos...'
+    : 'Salvando...'
     : hasAuction
       ? 'Salvar alterações'
       : 'Criar leilão'
@@ -346,6 +403,7 @@ export function CreateEditAuctionPage() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
+                  multiple
                   className="hidden"
                   onChange={handleStagedFileChange}
                 />
@@ -357,7 +415,7 @@ export function CreateEditAuctionPage() {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <p className="text-sm text-gray-400">Clique para adicionar fotos do produto</p>
-                  <p className="text-xs text-gray-300 mt-1">JPEG, PNG ou WebP · máx. {MAX_IMAGES} fotos</p>
+                  <p className="text-xs text-gray-300 mt-1">JPEG, PNG ou WebP · até {MAX_IMAGES} fotos · pode selecionar várias de uma vez</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-3">
@@ -391,7 +449,9 @@ export function CreateEditAuctionPage() {
             </div>
           )}
 
-          {errorMsg && <p className="text-sm text-red-600">{errorMsg}</p>}
+          {(errorMsg ?? uploadError) && (
+            <p className="text-sm text-red-600">{errorMsg ?? uploadError}</p>
+          )}
 
           <div className="flex gap-3 pt-2">
             <button
@@ -434,6 +494,7 @@ export function CreateEditAuctionPage() {
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
+              multiple
               className="hidden"
               onChange={handleUploadFileChange}
             />

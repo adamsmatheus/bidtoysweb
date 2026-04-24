@@ -4,8 +4,8 @@ import { adminApi } from '@/api/adminApi'
 
 export function PendingAuctionsPage() {
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-auctions-pending'],
-    queryFn: () => adminApi.listPending(),
+    queryKey: ['admin-auctions-pending', 0, 50],
+    queryFn: () => adminApi.listPending(0, 50),
     refetchInterval: 30_000,
   })
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNotificationStore } from '@/store/notificationStore'
 import { notificationApi } from '@/api/notificationApi'
 import type { AppNotification, AppNotificationType } from '@/types/notification'
@@ -30,12 +31,14 @@ function timeAgo(iso: string): string {
 
 function NotificationItem({ notification, onClose }: { notification: AppNotification; onClose: () => void }) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { markAsRead } = useNotificationStore()
 
   function handleClick() {
     markAsRead(notification.id)
     notificationApi.markRead(notification.id).catch(() => {})
     onClose()
+    queryClient.invalidateQueries({ queryKey: ['auction', notification.auctionId] })
     navigate(`/auctions/${notification.auctionId}`)
   }
 
