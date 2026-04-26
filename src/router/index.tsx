@@ -9,6 +9,7 @@ import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { AuctionListPage } from '@/pages/auctions/AuctionListPage'
+import { RaffleListPage } from '@/pages/raffles/RaffleListPage'
 import { AuctionDetailPage } from '@/pages/auctions/AuctionDetailPage'
 import { CreateEditAuctionPage } from '@/pages/auctions/CreateEditAuctionPage'
 import { MyAuctionsPage } from '@/pages/auctions/MyAuctionsPage'
@@ -37,6 +38,7 @@ export function AppRouter() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/auctions" element={<AuctionListPage />} />
           <Route path="/auctions/:id" element={<AuctionDetailPage />} />
+          <Route path="/rifas" element={<RaffleListPage />} />
 
           {/* Protected */}
           <Route element={<ProtectedRoute />}>

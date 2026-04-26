@@ -12,15 +12,21 @@ export function Navbar() {
   const logout = useLogout()
   const auth = isAuthenticated()
   const location = useLocation()
+  const [marketOpen, setMarketOpen] = useState(false)
   const [myAuctionsOpen, setMyAuctionsOpen] = useState(false)
+  const marketRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    setMarketOpen(false)
     setMyAuctionsOpen(false)
   }, [location.pathname])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
+      if (marketRef.current && !marketRef.current.contains(e.target as Node)) {
+        setMarketOpen(false)
+      }
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setMyAuctionsOpen(false)
       }
@@ -55,21 +61,46 @@ export function Navbar() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">
-            <NavLink
-              to="/auctions"
-              className={({ isActive }) =>
-                isActive
-                  ? 'text-sm font-semibold text-primary border-b-2 border-primary pb-1'
-                  : 'text-sm font-semibold text-on-surface-variant hover:text-primary transition-colors'
-              }
-            >
-              Leilões
-            </NavLink>
+            <div className="relative" ref={marketRef}>
+              <button
+                onClick={() => { setMarketOpen((v) => !v); setMyAuctionsOpen(false) }}
+                className={`flex items-center gap-1 text-sm font-semibold transition-colors ${
+                  ['/auctions', '/rifas'].some((p) => location.pathname.startsWith(p))
+                    ? 'text-primary border-b-2 border-primary pb-1'
+                    : 'text-on-surface-variant hover:text-primary'
+                }`}
+              >
+                Leilões
+                <span className={`material-symbols-outlined text-base transition-transform duration-150 ${marketOpen ? 'rotate-180' : ''}`}>
+                  expand_more
+                </span>
+              </button>
+
+              {marketOpen && (
+                <div className="absolute top-full left-0 mt-2 w-40 bg-white rounded-xl shadow-lg ring-1 ring-gray-100 overflow-hidden z-50">
+                  <Link
+                    to="/auctions"
+                    className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-base text-gray-400">gavel</span>
+                    Leilões
+                  </Link>
+                  <div className="border-t border-gray-100" />
+                  <Link
+                    to="/rifas"
+                    className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-base text-gray-400">confirmation_number</span>
+                    Rifas
+                  </Link>
+                </div>
+              )}
+            </div>
 
             {auth && (
               <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={() => setMyAuctionsOpen((v) => !v)}
+                  onClick={() => { setMyAuctionsOpen((v) => !v); setMarketOpen(false) }}
                   className={`flex items-center gap-1 text-sm font-semibold transition-colors ${
                     ['/my-auctions', '/my-buyers'].includes(location.pathname)
                       ? 'text-primary border-b-2 border-primary pb-1'
