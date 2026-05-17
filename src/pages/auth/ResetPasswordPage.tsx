@@ -38,7 +38,7 @@ export function ResetPasswordPage() {
       <div className="card p-8 w-full max-w-sm">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Redefinir senha</h1>
         <p className="text-sm text-gray-500 mb-6">
-          Digite o código de 6 dígitos enviado via WhatsApp e sua nova senha.
+          Digite o código de 6 dígitos enviado via SMS e sua nova senha.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -54,7 +54,7 @@ export function ResetPasswordPage() {
           </div>
 
           <div>
-            <label className="label">Código WhatsApp</label>
+            <label className="label">Código SMS</label>
             <input
               type="text"
               className="input tracking-widest text-center text-lg"

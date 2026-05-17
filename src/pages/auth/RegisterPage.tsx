@@ -370,7 +370,7 @@ export function RegisterPage() {
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="bg-green-50 border border-green-200 rounded-md p-3">
               <p className="text-sm text-green-800">
-                Código enviado para <strong>{fullPhone()}</strong>. Verifique seu WhatsApp.
+                Código enviado para <strong>{fullPhone()}</strong>. Verifique seu SMS.
               </p>
             </div>
 

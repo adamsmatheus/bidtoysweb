@@ -27,7 +27,7 @@ export function ForgotPasswordPage() {
       <div className="card p-8 w-full max-w-sm">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Esqueci minha senha</h1>
         <p className="text-sm text-gray-500 mb-6">
-          Informe seu e-mail e enviaremos um código via WhatsApp para redefinir sua senha.
+          Informe seu e-mail e enviaremos um código via SMS para redefinir sua senha.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
