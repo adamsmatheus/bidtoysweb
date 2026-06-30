@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { Toast } from '@/components/Toast'
 
 export function ProfilePage() {
-  const { userId, setName } = useAuthStore()
+  const { userId } = useAuthStore()
   const queryClient = useQueryClient()
 
   const { data: user } = useQuery({
@@ -21,7 +21,6 @@ export function ProfilePage() {
     enabled: !!userId,
   })
 
-  const [form, setForm] = useState({ name: '', phoneNumber: '' })
   const [companyForm, setCompanyForm] = useState({ name: '', description: '', logoUrl: '', pixKey: '' })
   const [editingAddress, setEditingAddress] = useState(false)
   const [addressForm, setAddressForm] = useState({ cep: '', street: '', city: '', state: '', number: '', complement: '' })
@@ -36,7 +35,6 @@ export function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      setForm({ name: user.name, phoneNumber: user.phoneNumber ?? '' })
       if (user.address) {
         setAddressForm({
           cep: user.address.cep,
@@ -73,19 +71,6 @@ export function ProfilePage() {
     setLogoPreview(URL.createObjectURL(file))
   }
 
-  const userMutation = useMutation({
-    mutationFn: () =>
-      userApi.update(userId!, {
-        name: form.name,
-        phoneNumber: form.phoneNumber || undefined,
-      }),
-    onSuccess: (updated) => {
-      setName(updated.name)
-      queryClient.invalidateQueries({ queryKey: ['me'] })
-      setToast({ message: 'Perfil atualizado com sucesso!', type: 'success' })
-    },
-  })
-
   const companyMutation = useMutation({
     mutationFn: async () => {
       let logoUrl = companyForm.logoUrl || undefined
@@ -110,11 +95,6 @@ export function ProfilePage() {
       setToast({ message: 'Empresa salva com sucesso!', type: 'success' })
     },
   })
-
-  const handleUserSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    userMutation.mutate()
-  }
 
   const deleteMutation = useMutation({
     mutationFn: () => companyApi.deleteMe(),
@@ -212,33 +192,18 @@ export function ProfilePage() {
           </div>
         </div>
 
-        <form onSubmit={handleUserSubmit} className="space-y-4 mt-4 border-t border-gray-100 pt-4">
-          <div>
-            <label className="label">Nome</label>
-            <input
-              type="text"
-              className="input"
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              required
-              minLength={2}
-            />
+        <div className="mt-4 border-t border-gray-100 pt-4 space-y-1 text-sm text-gray-600">
+          <div className="flex justify-between">
+            <span className="text-gray-400">Nome</span>
+            <span className="font-medium text-gray-800">{user.name}</span>
           </div>
-          <div>
-            <label className="label">Telefone</label>
-            <input
-              type="tel"
-              className="input"
-              value={form.phoneNumber}
-              onChange={(e) => setForm((p) => ({ ...p, phoneNumber: e.target.value }))}
-              placeholder="(11) 99999-9999"
-            />
-          </div>
-
-          <button type="submit" className="btn-primary" disabled={userMutation.isPending}>
-            {userMutation.isPending ? 'Salvando...' : 'Salvar'}
-          </button>
-        </form>
+          {user.phoneNumber && (
+            <div className="flex justify-between">
+              <span className="text-gray-400">Telefone</span>
+              <span className="font-medium text-gray-800">{user.phoneNumber}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Endereço */}
