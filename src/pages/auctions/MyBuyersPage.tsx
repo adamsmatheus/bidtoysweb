@@ -21,15 +21,16 @@ const SHIPMENT_LABEL: Record<string, { label: string; className: string; highlig
 
 function BuyerCard({ buyer }: { buyer: BuyerSummaryResponse }) {
   const [expanded, setExpanded] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
 
   return (
     <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
       {/* Header do comprador */}
-      <button
-        className="w-full flex items-center justify-between gap-4 px-5 py-4 hover:bg-gray-50 transition-colors text-left"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-2 px-5 py-4">
+        <button
+          className="flex items-center gap-3 min-w-0 flex-1 hover:bg-gray-50 -mx-2 px-2 py-1 rounded-xl transition-colors text-left"
+          onClick={() => setExpanded((v) => !v)}
+        >
           <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-sm shrink-0">
             {buyer.buyerName.charAt(0).toUpperCase()}
           </div>
@@ -39,11 +40,65 @@ function BuyerCard({ buyer }: { buyer: BuyerSummaryResponse }) {
               {buyer.auctionCount} {buyer.auctionCount === 1 ? 'leilão' : 'leilões'} · Total {formatBRL(buyer.totalAmount)}
             </p>
           </div>
+        </button>
+
+        {/* Botão de informações do comprador */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowInfo((v) => !v)}
+            className={`p-2 rounded-full transition-colors ${showInfo ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'}`}
+            title="Ver contato do comprador"
+          >
+            <span className="material-symbols-outlined text-[20px]">info</span>
+          </button>
+
+          {showInfo && (
+            <>
+              {/* Overlay para fechar ao clicar fora */}
+              <div className="fixed inset-0 z-10" onClick={() => setShowInfo(false)} />
+              <div className="absolute right-0 top-10 z-20 w-64 bg-white rounded-2xl shadow-xl ring-1 ring-gray-200 p-4 space-y-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contato do comprador</p>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-blue-500 shrink-0">mail</span>
+                  <a
+                    href={`mailto:${buyer.buyerEmail}`}
+                    className="text-sm text-gray-800 hover:text-blue-600 truncate transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {buyer.buyerEmail}
+                  </a>
+                </div>
+                {buyer.buyerPhone ? (
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-green-500 shrink-0">phone</span>
+                    <a
+                      href={`tel:${buyer.buyerPhone}`}
+                      className="text-sm text-gray-800 hover:text-green-600 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {buyer.buyerPhone}
+                    </a>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-gray-300 shrink-0">phone_disabled</span>
+                    <span className="text-sm text-gray-400">Telefone não informado</span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
-        <span className={`material-symbols-outlined text-gray-400 transition-transform duration-200 shrink-0 ${expanded ? 'rotate-180' : ''}`}>
-          expand_more
-        </span>
-      </button>
+
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="shrink-0 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <span className={`material-symbols-outlined transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}>
+            expand_more
+          </span>
+        </button>
+      </div>
 
       {/* Lista de leilões */}
       {expanded && (

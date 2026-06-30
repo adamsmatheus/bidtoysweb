@@ -44,6 +44,9 @@ export const auctionApi = {
       .then((r) => r.data)
   },
 
+  delete: (id: string) =>
+    http.delete(`/auctions/${id}`),
+
   deleteImage: (id: string, imageId: string) =>
     http.delete(`/auctions/${id}/images/${imageId}`),
 

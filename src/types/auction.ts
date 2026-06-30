@@ -92,6 +92,8 @@ export interface UpdateShipmentStatusRequest {
 export interface BuyerSummaryResponse {
   buyerId: string
   buyerName: string
+  buyerEmail: string
+  buyerPhone: string | null
   auctionCount: number
   totalAmount: number
   auctions: BuyerAuctionItem[]

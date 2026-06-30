@@ -41,17 +41,28 @@ const STATUS_BADGE: Record<AuctionStatus, { label: string; className: string }> 
   PAYMENT_DISPUTED:     { label: 'Pag. contestado',      className: 'bg-error-container text-on-error-container' },
 }
 
+const DELETABLE_STATUSES: AuctionStatus[] = [
+  'DRAFT', 'PENDING_APPROVAL', 'REJECTED', 'READY_TO_START', 'ACTIVE', 'CANCELLED',
+]
+
 function MyAuctionCard({ auction }: { auction: AuctionResponse }) {
   const queryClient = useQueryClient()
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const coverImage = auction.images.find((img) => img.position === 0) ?? auction.images[0]
   const badge = STATUS_BADGE[auction.status]
   const isDraft = auction.status === 'DRAFT'
   const isRejected = auction.status === 'REJECTED'
   const isSubmittable = isDraft || isRejected
   const isFinished = auction.status === 'FINISHED_WITH_WINNER' || auction.status === 'FINISHED_NO_BIDS'
+  const canDelete = DELETABLE_STATUSES.includes(auction.status)
 
   const submitMutation = useMutation({
     mutationFn: () => auctionApi.submit(auction.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-auctions'] }),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => auctionApi.delete(auction.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-auctions'] }),
   })
 
@@ -100,7 +111,25 @@ function MyAuctionCard({ auction }: { auction: AuctionResponse }) {
           </p>
         </div>
 
-        {isSubmittable ? (
+        {confirmingDelete ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-on-surface-variant flex-1">Confirmar exclusão?</span>
+            <button
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+              className="px-3 py-1.5 rounded-full bg-error text-on-error font-bold text-xs active:scale-95 transition-all disabled:opacity-60"
+            >
+              {deleteMutation.isPending ? 'Excluindo...' : 'Excluir'}
+            </button>
+            <button
+              onClick={() => setConfirmingDelete(false)}
+              disabled={deleteMutation.isPending}
+              className="px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant font-bold text-xs active:scale-95 transition-all"
+            >
+              Cancelar
+            </button>
+          </div>
+        ) : isSubmittable ? (
           <div className="flex gap-2">
             <Link
               to={`/auctions/${auction.id}/edit`}
@@ -117,6 +146,13 @@ function MyAuctionCard({ auction }: { auction: AuctionResponse }) {
               <span className="material-symbols-outlined text-sm">send</span>
               {submitMutation.isPending ? 'Enviando...' : isRejected ? 'Reenviar para aprovação' : 'Enviar para aprovação'}
             </button>
+            <button
+              onClick={() => setConfirmingDelete(true)}
+              className="p-3 rounded-full bg-error-container text-on-error-container active:scale-90 transition-all hover:bg-error/20"
+              title="Excluir leilão"
+            >
+              <span className="material-symbols-outlined text-sm">delete</span>
+            </button>
           </div>
         ) : isFinished ? (
           <Link
@@ -126,7 +162,16 @@ function MyAuctionCard({ auction }: { auction: AuctionResponse }) {
             Ver detalhes
           </Link>
         ) : (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            {canDelete && (
+              <button
+                onClick={() => setConfirmingDelete(true)}
+                className="p-3 rounded-full bg-error-container text-on-error-container active:scale-90 transition-all hover:bg-error/20"
+                title="Excluir leilão"
+              >
+                <span className="material-symbols-outlined text-sm">delete</span>
+              </button>
+            )}
             <Link
               to={`/auctions/${auction.id}`}
               className="bg-surface-container-high text-on-surface p-3 rounded-full active:scale-90 transition-all hover:bg-surface-container-highest"
