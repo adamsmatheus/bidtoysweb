@@ -14,12 +14,14 @@ export function Navbar() {
   const location = useLocation()
   const [marketOpen, setMarketOpen] = useState(false)
   const [myAuctionsOpen, setMyAuctionsOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const marketRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setMarketOpen(false)
     setMyAuctionsOpen(false)
+    setMobileOpen(false)
   }, [location.pathname])
 
   useEffect(() => {
@@ -171,13 +173,13 @@ export function Navbar() {
             <div className="flex items-center gap-3">
               <NavLink
                 to="/profile"
-                className="text-sm font-semibold text-on-surface-variant hover:text-primary transition-colors"
+                className="hidden md:block text-sm font-semibold text-on-surface-variant hover:text-primary transition-colors"
               >
                 {name ?? 'Perfil'}
               </NavLink>
               <button
                 onClick={logout}
-                className="text-sm font-semibold text-on-surface-variant hover:text-error transition-colors"
+                className="hidden md:block text-sm font-semibold text-on-surface-variant hover:text-error transition-colors"
               >
                 Sair
               </button>
@@ -192,8 +194,97 @@ export function Navbar() {
               </Link>
             </div>
           )}
+
+          {/* Hamburger — apenas mobile */}
+          <button
+            className="md:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container transition-colors"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label="Menu"
+          >
+            <span className="material-symbols-outlined text-on-surface-variant">
+              {mobileOpen ? 'close' : 'menu'}
+            </span>
+          </button>
         </div>
       </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-outline-variant/20 bg-white/95 backdrop-blur-xl px-6 py-4 flex flex-col gap-1">
+          <Link
+            to="/auctions"
+            className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined text-base text-gray-400">gavel</span>
+            Leilões
+          </Link>
+          <Link
+            to="/rifas"
+            className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined text-base text-gray-400">confirmation_number</span>
+            Rifas
+          </Link>
+
+          {auth && (
+            <>
+              <div className="border-t border-outline-variant/20 my-1" />
+              <Link
+                to="/my-auctions"
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
+              >
+                <span className="material-symbols-outlined text-base text-gray-400">gavel</span>
+                Meus Leilões
+              </Link>
+              <Link
+                to="/auctions/new"
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
+              >
+                <span className="material-symbols-outlined text-base text-gray-400">add_circle</span>
+                Criar Leilão
+              </Link>
+              <Link
+                to="/my-buyers"
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
+              >
+                <span className="material-symbols-outlined text-base text-gray-400">group</span>
+                Compradores
+              </Link>
+              <Link
+                to="/my-wins"
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
+              >
+                <span className="material-symbols-outlined text-base text-gray-400">emoji_events</span>
+                Meus Arremates
+              </Link>
+              {isAdmin() && (
+                <Link
+                  to="/admin"
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
+                >
+                  <span className="material-symbols-outlined text-base text-gray-400">admin_panel_settings</span>
+                  Admin
+                </Link>
+              )}
+              <div className="border-t border-outline-variant/20 my-1" />
+              <Link
+                to="/profile"
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
+              >
+                <span className="material-symbols-outlined text-base text-gray-400">person</span>
+                {name ?? 'Perfil'}
+              </Link>
+              <button
+                onClick={logout}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-error hover:bg-error-container/20 transition-colors w-full text-left"
+              >
+                <span className="material-symbols-outlined text-base">logout</span>
+                Sair
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </header>
   )
 }
