@@ -110,8 +110,7 @@ export function RegisterPage() {
     password: '',
     confirmPassword: '',
     countryCode: '+55',
-    whatsappNumber: '',
-    verificationCode: '',
+    phoneNumber: '',
     cep: '',
     street: '',
     city: '',
@@ -125,14 +124,47 @@ export function RegisterPage() {
   const [isFetchingCep, setIsFetchingCep] = useState(false)
   const [cepError, setCepError] = useState<string | null>(null)
 
+  // Estado da verificação Telegram
+  const [verificationToken, setVerificationToken] = useState<string | null>(null)
+  const [deepLink, setDeepLink] = useState<string | null>(null)
+  const [telegramVerified, setTelegramVerified] = useState(false)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   const register = useRegister()
 
-  const fullPhone = () => `${form.countryCode}${form.whatsappNumber}`
+  const fullPhone = () => `${form.countryCode}${form.phoneNumber}`
 
-  const sendCode = useMutation({
-    mutationFn: () => authApi.sendWhatsAppCode({ phoneNumber: fullPhone() }),
-    onSuccess: () => setStep('verify'),
+  const requestVerification = useMutation({
+    mutationFn: () => authApi.requestTelegramVerification({ phoneNumber: fullPhone() }),
+    onSuccess: (data) => {
+      setVerificationToken(data.token)
+      setDeepLink(data.deepLink)
+      setTelegramVerified(false)
+      setStep('verify')
+      startPolling(data.token)
+    },
   })
+
+  const startPolling = (token: string) => {
+    if (pollingRef.current) clearInterval(pollingRef.current)
+    pollingRef.current = setInterval(async () => {
+      try {
+        const result = await authApi.checkTelegramVerification(token)
+        if (result.verified) {
+          setTelegramVerified(true)
+          if (pollingRef.current) clearInterval(pollingRef.current)
+        }
+      } catch {
+        // silencioso
+      }
+    }, 2000)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+    }
+  }, [])
 
   const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
@@ -179,12 +211,12 @@ export function RegisterPage() {
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!verificationToken) return
     register.mutate({
       name: `${form.firstName} ${form.lastName}`.trim(),
       email: form.email,
       password: form.password,
-      whatsappNumber: fullPhone(),
-      verificationCode: form.verificationCode,
+      verificationToken,
       address: {
         cep: form.cep,
         street: form.street,
@@ -196,7 +228,13 @@ export function RegisterPage() {
     })
   }
 
-  const getErrorMsg = (mutation: typeof register | typeof sendCode) => {
+  const handleRetryVerification = () => {
+    requestVerification.reset()
+    setTelegramVerified(false)
+    requestVerification.mutate()
+  }
+
+  const getErrorMsg = (mutation: typeof register | typeof requestVerification) => {
     const err = mutation.error as { response?: { data?: { message?: string } } } | null
     return err?.response?.data?.message ?? null
   }
@@ -284,7 +322,7 @@ export function RegisterPage() {
               {passwordError && <p className="text-xs text-red-600 mt-1">{passwordError}</p>}
             </div>
             <div>
-              <label className="label">WhatsApp</label>
+              <label className="label">Telefone</label>
               <div className="flex gap-2">
                 <CountryCodePicker
                   value={form.countryCode}
@@ -293,14 +331,14 @@ export function RegisterPage() {
                 <input
                   type="tel"
                   className="input flex-1"
-                  value={form.whatsappNumber}
-                  onChange={set('whatsappNumber')}
+                  value={form.phoneNumber}
+                  onChange={set('phoneNumber')}
                   placeholder="11 99999-9999"
                   required
                 />
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Você receberá um código de verificação neste número.
+                Você verificará este número pelo Telegram.
               </p>
             </div>
 
@@ -311,7 +349,7 @@ export function RegisterPage() {
         )}
 
         {step === 'address' && (
-          <form onSubmit={(e) => { e.preventDefault(); sendCode.mutate() }} className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); requestVerification.mutate() }} className="space-y-4">
             <div>
               <label className="label">CEP</label>
               <input
@@ -352,12 +390,12 @@ export function RegisterPage() {
               </div>
             </div>
 
-            {getErrorMsg(sendCode) && (
-              <p className="text-sm text-red-600">{getErrorMsg(sendCode)}</p>
+            {getErrorMsg(requestVerification) && (
+              <p className="text-sm text-red-600">{getErrorMsg(requestVerification)}</p>
             )}
 
-            <button type="submit" className="btn-primary w-full" disabled={sendCode.isPending}>
-              {sendCode.isPending ? 'Enviando código...' : 'Enviar código de verificação'}
+            <button type="submit" className="btn-primary w-full" disabled={requestVerification.isPending}>
+              {requestVerification.isPending ? 'Gerando link...' : 'Verificar pelo Telegram'}
             </button>
 
             <button type="button" className="btn-secondary w-full" onClick={() => setStep('form')}>
@@ -367,56 +405,85 @@ export function RegisterPage() {
         )}
 
         {step === 'verify' && (
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-md p-3">
-              <p className="text-sm text-green-800">
-                Código enviado para <strong>{fullPhone()}</strong>. Verifique seu SMS.
-              </p>
-            </div>
-
-            <div>
-              <label className="label">Código de verificação</label>
-              <input
-                type="text"
-                className="input text-center tracking-widest text-lg"
-                value={form.verificationCode}
-                onChange={set('verificationCode')}
-                placeholder="000000"
-                maxLength={6}
-                required
-                autoFocus
-              />
-            </div>
-
-            {getErrorMsg(register) && (
-              <p className="text-sm text-red-600">{getErrorMsg(register)}</p>
+          <div className="space-y-4">
+            {!telegramVerified ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                <p className="text-sm text-blue-900 font-medium mb-1">Verifique seu número pelo Telegram</p>
+                <p className="text-xs text-blue-700">
+                  Clique no botão abaixo para abrir o bot. O app detectará automaticamente quando você confirmar.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-green-50 border border-green-200 rounded-md p-4">
+                <p className="text-sm text-green-800 font-medium">Numero verificado com sucesso!</p>
+                <p className="text-xs text-green-700">Clique em "Criar conta" para finalizar o cadastro.</p>
+              </div>
             )}
 
-            {register.isSuccess && (
-              <p className="text-sm text-green-600">Conta criada! Faça login.</p>
+            {deepLink && !telegramVerified && (
+              <a
+                href={deepLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary w-full flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                </svg>
+                Abrir BidToysBot no Telegram
+              </a>
             )}
 
-            <button type="submit" className="btn-primary w-full" disabled={register.isPending}>
-              {register.isPending ? 'Criando conta...' : 'Criar conta'}
-            </button>
+            {!telegramVerified && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <svg className="w-4 h-4 animate-spin text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Aguardando confirmação no Telegram...
+              </div>
+            )}
+
+            <form onSubmit={handleRegister}>
+              {getErrorMsg(register) && (
+                <p className="text-sm text-red-600 mb-3">{getErrorMsg(register)}</p>
+              )}
+              {register.isSuccess && (
+                <p className="text-sm text-green-600 mb-3">Conta criada! Faça login.</p>
+              )}
+
+              <button
+                type="submit"
+                className="btn-primary w-full"
+                disabled={!telegramVerified || register.isPending}
+              >
+                {register.isPending ? 'Criando conta...' : 'Criar conta'}
+              </button>
+            </form>
 
             <button
               type="button"
               className="btn-secondary w-full"
-              onClick={() => { setStep('address'); sendCode.reset() }}
+              onClick={() => {
+                if (pollingRef.current) clearInterval(pollingRef.current)
+                setStep('address')
+                requestVerification.reset()
+              }}
             >
               Voltar
             </button>
 
-            <button
-              type="button"
-              className="text-sm text-primary-600 hover:underline w-full text-center"
-              disabled={sendCode.isPending}
-              onClick={() => { sendCode.reset(); sendCode.mutate() }}
-            >
-              {sendCode.isPending ? 'Reenviando...' : 'Reenviar código'}
-            </button>
-          </form>
+            {!telegramVerified && (
+              <button
+                type="button"
+                className="text-sm text-primary-600 hover:underline w-full text-center"
+                disabled={requestVerification.isPending}
+                onClick={handleRetryVerification}
+              >
+                {requestVerification.isPending ? 'Gerando novo link...' : 'Gerar novo link'}
+              </button>
+            )}
+          </div>
         )}
 
         <p className="text-sm text-center text-gray-500 mt-4">

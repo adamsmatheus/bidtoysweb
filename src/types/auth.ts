@@ -11,13 +11,17 @@ export interface RegisterRequest {
   name: string
   email: string
   password: string
-  whatsappNumber: string
-  verificationCode: string
+  verificationToken: string
   address: AddressRequest
 }
 
-export interface SendWhatsAppCodeRequest {
+export interface RequestTelegramVerificationRequest {
   phoneNumber: string
+}
+
+export interface TelegramVerificationResponse {
+  token: string
+  deepLink: string
 }
 
 export interface LoginRequest {

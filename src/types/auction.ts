@@ -51,6 +51,7 @@ export interface AuctionResponse {
   holdShipment: boolean
   shipmentStatus: ShipmentStatus | null
   trackingCode: string | null
+  paymentReceiptUrl: string | null
 }
 
 export interface CreateAuctionRequest {

@@ -1,5 +1,11 @@
 import http from './http'
-import type { LoginRequest, LoginResponse, RegisterRequest, SendWhatsAppCodeRequest } from '@/types/auth'
+import type {
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  RequestTelegramVerificationRequest,
+  TelegramVerificationResponse,
+} from '@/types/auth'
 import type { UserResponse } from '@/types/user'
 
 export const authApi = {
@@ -9,8 +15,11 @@ export const authApi = {
   login: (data: LoginRequest) =>
     http.post<LoginResponse>('/auth/login', data).then((r) => r.data),
 
-  sendWhatsAppCode: (data: SendWhatsAppCodeRequest) =>
-    http.post('/auth/whatsapp/send-code', data),
+  requestTelegramVerification: (data: RequestTelegramVerificationRequest) =>
+    http.post<TelegramVerificationResponse>('/auth/telegram/request-verification', data).then((r) => r.data),
+
+  checkTelegramVerification: (token: string) =>
+    http.get<{ verified: boolean }>(`/auth/telegram/check-verification?token=${token}`).then((r) => r.data),
 
   forgotPassword: (email: string) =>
     http.post('/auth/forgot-password', { email }),
