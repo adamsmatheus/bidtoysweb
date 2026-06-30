@@ -77,6 +77,7 @@ export function AuctionDetailPage() {
   const [selectedImage, setSelectedImage] = useState(0)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [holdShipment, setHoldShipment] = useState(false)
+  const [paymentReceipt, setPaymentReceipt] = useState<File | null>(null)
   const [trackingCodeInput, setTrackingCodeInput] = useState('')
   const trackingRef = useRef<HTMLInputElement>(null)
 
@@ -132,10 +133,18 @@ export function AuctionDetailPage() {
   })
 
   const declarePaymentMutation = useMutation({
-    mutationFn: (holdShipmentValue: boolean) => auctionApi.declarePayment(id!, holdShipmentValue),
+    mutationFn: async (holdShipmentValue: boolean) => {
+      let receiptUrl: string | undefined
+      if (paymentReceipt) {
+        const result = await auctionApi.uploadPaymentReceipt(id!, paymentReceipt)
+        receiptUrl = result.receiptUrl
+      }
+      return auctionApi.declarePayment(id!, holdShipmentValue, receiptUrl)
+    },
     onSuccess: () => {
       setShowPaymentModal(false)
       setHoldShipment(false)
+      setPaymentReceipt(null)
       queryClient.invalidateQueries({ queryKey: ['auction', id] })
       queryClient.invalidateQueries({ queryKey: ['my-auctions'] })
       queryClient.invalidateQueries({ queryKey: ['my-wins'] })
@@ -364,6 +373,19 @@ export function AuctionDetailPage() {
                         ? 'Você optou por guardar o produto para envio futuro.'
                         : 'O comprador optou por guardar o produto para envio futuro.'}
                     </span>
+                  </div>
+                )}
+                {auction.paymentReceiptUrl && (
+                  <div className="rounded-md bg-gray-50 border border-gray-200 p-3 text-sm flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-gray-500">receipt_long</span>
+                    <a
+                      href={auction.paymentReceiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-600 hover:underline truncate"
+                    >
+                      Ver comprovante de pagamento
+                    </a>
                   </div>
                 )}
                 {isWinner && auction.company?.pixKey && (
@@ -614,10 +636,36 @@ export function AuctionDetailPage() {
               </div>
             </label>
 
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-gray-700">Comprovante de pagamento <span className="text-gray-400 font-normal">(opcional)</span></p>
+              <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-dashed border-gray-300 hover:bg-gray-50 transition-colors">
+                <span className="material-symbols-outlined text-gray-400 text-base">attach_file</span>
+                <span className="text-sm text-gray-500 truncate flex-1">
+                  {paymentReceipt ? paymentReceipt.name : 'Selecionar arquivo (JPEG, PNG, PDF)'}
+                </span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  className="hidden"
+                  onChange={(e) => setPaymentReceipt(e.target.files?.[0] ?? null)}
+                  disabled={declarePaymentMutation.isPending}
+                />
+              </label>
+              {paymentReceipt && (
+                <button
+                  type="button"
+                  className="text-xs text-red-500 hover:underline"
+                  onClick={() => setPaymentReceipt(null)}
+                >
+                  Remover arquivo
+                </button>
+              )}
+            </div>
+
             <div className="flex gap-3 pt-1">
               <button
                 className="flex-1 btn-secondary btn-sm"
-                onClick={() => { setShowPaymentModal(false); setHoldShipment(false) }}
+                onClick={() => { setShowPaymentModal(false); setHoldShipment(false); setPaymentReceipt(null) }}
                 disabled={declarePaymentMutation.isPending}
               >
                 Cancelar

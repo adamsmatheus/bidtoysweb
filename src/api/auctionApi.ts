@@ -56,8 +56,18 @@ export const auctionApi = {
   listMyBuyers: () =>
     http.get<BuyerSummaryResponse[]>('/auctions/my-buyers').then((r) => r.data),
 
-  declarePayment: (id: string, holdShipment: boolean) =>
-    http.post<AuctionResponse>(`/auctions/${id}/declare-payment`, { holdShipment }).then((r) => r.data),
+  uploadPaymentReceipt: (id: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return http
+      .post<{ receiptUrl: string }>(`/auctions/${id}/payment-receipt`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data)
+  },
+
+  declarePayment: (id: string, holdShipment: boolean, receiptUrl?: string) =>
+    http.post<AuctionResponse>(`/auctions/${id}/declare-payment`, { holdShipment, receiptUrl }).then((r) => r.data),
 
   confirmPayment: (id: string) =>
     http.post<AuctionResponse>(`/auctions/${id}/confirm-payment`).then((r) => r.data),
