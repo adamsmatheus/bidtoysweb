@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
-import { useRegister } from '@/hooks/useAuth'
-import { authApi } from '@/api/authApi'
+import { useRegister, useVerifyEmail } from '@/hooks/useAuth'
 
-type Step = 'form' | 'address' | 'verify'
+type Step = 'form' | 'address' | 'verify-email'
 
 const COUNTRY_CODES = [
   { code: '+55', iso: 'br', name: 'Brasil' },
@@ -110,7 +108,7 @@ export function RegisterPage() {
     password: '',
     confirmPassword: '',
     countryCode: '+55',
-    whatsappNumber: '',
+    phoneNumber: '',
     verificationCode: '',
     cep: '',
     street: '',
@@ -125,14 +123,10 @@ export function RegisterPage() {
   const [isFetchingCep, setIsFetchingCep] = useState(false)
   const [cepError, setCepError] = useState<string | null>(null)
 
-  const register = useRegister()
+  const register = useRegister(() => setStep('verify-email'))
+  const verifyEmail = useVerifyEmail()
 
-  const fullPhone = () => `${form.countryCode}${form.whatsappNumber}`
-
-  const sendCode = useMutation({
-    mutationFn: () => authApi.sendWhatsAppCode({ phoneNumber: fullPhone() }),
-    onSuccess: () => setStep('verify'),
-  })
+  const fullPhone = () => `${form.countryCode}${form.phoneNumber}`
 
   const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
@@ -183,8 +177,7 @@ export function RegisterPage() {
       name: `${form.firstName} ${form.lastName}`.trim(),
       email: form.email,
       password: form.password,
-      whatsappNumber: fullPhone(),
-      verificationCode: form.verificationCode,
+      phoneNumber: fullPhone(),
       address: {
         cep: form.cep,
         street: form.street,
@@ -196,7 +189,12 @@ export function RegisterPage() {
     })
   }
 
-  const getErrorMsg = (mutation: typeof register | typeof sendCode) => {
+  const handleVerifyEmail = (e: React.FormEvent) => {
+    e.preventDefault()
+    verifyEmail.mutate({ email: form.email, code: form.verificationCode })
+  }
+
+  const getErrorMsg = (mutation: typeof register | typeof verifyEmail) => {
     const err = mutation.error as { response?: { data?: { message?: string } } } | null
     return err?.response?.data?.message ?? null
   }
@@ -284,7 +282,7 @@ export function RegisterPage() {
               {passwordError && <p className="text-xs text-red-600 mt-1">{passwordError}</p>}
             </div>
             <div>
-              <label className="label">WhatsApp</label>
+              <label className="label">Telefone</label>
               <div className="flex gap-2">
                 <CountryCodePicker
                   value={form.countryCode}
@@ -293,15 +291,12 @@ export function RegisterPage() {
                 <input
                   type="tel"
                   className="input flex-1"
-                  value={form.whatsappNumber}
-                  onChange={set('whatsappNumber')}
+                  value={form.phoneNumber}
+                  onChange={set('phoneNumber')}
                   placeholder="11 99999-9999"
                   required
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Você receberá um código de verificação neste número.
-              </p>
             </div>
 
             <button type="submit" className="btn-primary w-full">
@@ -311,7 +306,7 @@ export function RegisterPage() {
         )}
 
         {step === 'address' && (
-          <form onSubmit={(e) => { e.preventDefault(); sendCode.mutate() }} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
             <div>
               <label className="label">CEP</label>
               <input
@@ -352,12 +347,12 @@ export function RegisterPage() {
               </div>
             </div>
 
-            {getErrorMsg(sendCode) && (
-              <p className="text-sm text-red-600">{getErrorMsg(sendCode)}</p>
+            {getErrorMsg(register) && (
+              <p className="text-sm text-red-600">{getErrorMsg(register)}</p>
             )}
 
-            <button type="submit" className="btn-primary w-full" disabled={sendCode.isPending}>
-              {sendCode.isPending ? 'Enviando código...' : 'Enviar código de verificação'}
+            <button type="submit" className="btn-primary w-full" disabled={register.isPending}>
+              {register.isPending ? 'Criando conta...' : 'Criar conta'}
             </button>
 
             <button type="button" className="btn-secondary w-full" onClick={() => setStep('form')}>
@@ -366,11 +361,11 @@ export function RegisterPage() {
           </form>
         )}
 
-        {step === 'verify' && (
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-md p-3">
-              <p className="text-sm text-green-800">
-                Código enviado para <strong>{fullPhone()}</strong>. Verifique seu WhatsApp.
+        {step === 'verify-email' && (
+          <form onSubmit={handleVerifyEmail} className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <p className="text-sm text-blue-800">
+                Enviamos um código de 6 dígitos para <strong>{form.email}</strong>. Verifique sua caixa de entrada.
               </p>
             </div>
 
@@ -388,33 +383,27 @@ export function RegisterPage() {
               />
             </div>
 
-            {getErrorMsg(register) && (
-              <p className="text-sm text-red-600">{getErrorMsg(register)}</p>
+            {getErrorMsg(verifyEmail) && (
+              <p className="text-sm text-red-600">{getErrorMsg(verifyEmail)}</p>
             )}
 
-            {register.isSuccess && (
-              <p className="text-sm text-green-600">Conta criada! Faça login.</p>
-            )}
-
-            <button type="submit" className="btn-primary w-full" disabled={register.isPending}>
-              {register.isPending ? 'Criando conta...' : 'Criar conta'}
-            </button>
-
-            <button
-              type="button"
-              className="btn-secondary w-full"
-              onClick={() => { setStep('address'); sendCode.reset() }}
-            >
-              Voltar
+            <button type="submit" className="btn-primary w-full" disabled={verifyEmail.isPending}>
+              {verifyEmail.isPending ? 'Verificando...' : 'Confirmar e-mail'}
             </button>
 
             <button
               type="button"
               className="text-sm text-primary-600 hover:underline w-full text-center"
-              disabled={sendCode.isPending}
-              onClick={() => { sendCode.reset(); sendCode.mutate() }}
+              disabled={register.isPending}
+              onClick={() => { register.reset(); register.mutate({
+                name: `${form.firstName} ${form.lastName}`.trim(),
+                email: form.email,
+                password: form.password,
+                phoneNumber: fullPhone(),
+                address: { cep: form.cep, street: form.street, city: form.city, state: form.state, number: form.number, complement: form.complement || undefined },
+              }) }}
             >
-              {sendCode.isPending ? 'Reenviando...' : 'Reenviar código'}
+              {register.isPending ? 'Reenviando...' : 'Reenviar código'}
             </button>
           </form>
         )}
