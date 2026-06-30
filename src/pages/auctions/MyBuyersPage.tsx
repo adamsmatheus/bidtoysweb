@@ -24,7 +24,7 @@ function BuyerCard({ buyer }: { buyer: BuyerSummaryResponse }) {
   const [showInfo, setShowInfo] = useState(false)
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100">
       {/* Header do comprador */}
       <div className="flex items-center gap-2 px-5 py-4">
         <button
@@ -56,7 +56,7 @@ function BuyerCard({ buyer }: { buyer: BuyerSummaryResponse }) {
             <>
               {/* Overlay para fechar ao clicar fora */}
               <div className="fixed inset-0 z-10" onClick={() => setShowInfo(false)} />
-              <div className="absolute right-0 top-10 z-20 w-80 bg-white rounded-2xl shadow-xl ring-1 ring-gray-200 p-4 space-y-3">
+              <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 z-20 w-72 bg-white rounded-2xl shadow-xl ring-1 ring-gray-200 p-4 space-y-3">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contato do comprador</p>
                 <div className="flex items-start gap-2">
                   <span className="material-symbols-outlined text-[18px] text-blue-500 shrink-0 mt-0.5">mail</span>
