@@ -290,7 +290,7 @@ export function AuctionDetailPage() {
             ) : (
               <ul className="divide-y divide-gray-100">
                 {bidsPage?.content.map((bid) => (
-                  <li key={bid.id} className="py-2 flex justify-between text-sm">
+                  <li key={bid.id} className="py-2 grid grid-cols-[1fr_auto_auto] gap-x-4 items-center text-sm">
                     <span className="text-gray-500">{bid.bidderName}</span>
                     <span className="font-semibold text-primary-700">
                       {formatBRL(bid.amount)}
