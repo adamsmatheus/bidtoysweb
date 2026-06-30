@@ -27,6 +27,7 @@ export function ProfilePage() {
   const [addressForm, setAddressForm] = useState({ cep: '', street: '', city: '', state: '', number: '', complement: '' })
   const [isFetchingCep, setIsFetchingCep] = useState(false)
   const [cepError, setCepError] = useState<string | null>(null)
+  const [editingCompany, setEditingCompany] = useState(false)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -101,7 +102,9 @@ export function ProfilePage() {
     },
     onSuccess: (data) => {
       setLogoFile(null)
+      setLogoPreview(null)
       setCompanyForm((p) => ({ ...p, logoUrl: data.logoUrl ?? '' }))
+      setEditingCompany(false)
       queryClient.invalidateQueries({ queryKey: ['my-company'] })
       queryClient.invalidateQueries({ queryKey: ['companies-active'] })
       setToast({ message: 'Empresa salva com sucesso!', type: 'success' })
@@ -313,139 +316,148 @@ export function ProfilePage() {
 
       {/* Empresa */}
       <div className="card p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Minha Empresa</h2>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-semibold text-gray-900">Minha Empresa</h2>
+          {company && !editingCompany && (
+            <button
+              type="button"
+              onClick={() => setEditingCompany(true)}
+              className="flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-800 font-medium transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]">edit</span>
+              Editar
+            </button>
+          )}
+        </div>
         <p className="text-sm text-gray-500 mb-4">
           Necessário para criar leilões. Suas informações serão exibidas publicamente.
         </p>
 
-        <form onSubmit={handleCompanySubmit} className="space-y-4">
-          <div>
-            <label className="label">Nome da empresa *</label>
-            <input
-              type="text"
-              className="input"
-              value={companyForm.name}
-              onChange={(e) => setCompanyForm((p) => ({ ...p, name: e.target.value }))}
-              required
-              minLength={2}
-              maxLength={255}
-              disabled={!!company}
-            />
-          </div>
-          <div>
-            <label className="label">Descrição</label>
-            <textarea
-              className="input resize-none"
-              rows={2}
-              value={companyForm.description}
-              onChange={(e) => setCompanyForm((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Breve descrição da sua empresa"
-              disabled={!!company}
-            />
-          </div>
-          <div>
-            <label className="label">Logo da empresa</label>
-            <input
-              ref={logoInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleLogoChange}
-              disabled={!!company}
-            />
+        {/* Modo leitura — empresa já cadastrada e não editando */}
+        {company && !editingCompany ? (
+          <div className="space-y-4">
             <div className="flex items-center gap-4">
-              {(logoPreview || companyForm.logoUrl) && (
+              {company.logoUrl && (
                 <img
-                  src={logoPreview ?? companyForm.logoUrl}
-                  alt="Preview do logo"
+                  src={company.logoUrl}
+                  alt="Logo"
                   className="h-16 w-16 rounded-lg object-cover border border-gray-200 shrink-0"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                 />
               )}
-              {!company && (
-                <button
-                  type="button"
-                  onClick={() => logoInputRef.current?.click()}
-                  className="btn-secondary text-sm"
-                >
-                  {companyForm.logoUrl || logoPreview ? 'Trocar logo' : 'Selecionar logo'}
-                </button>
-              )}
-              {logoFile && (
-                <span className="text-sm text-gray-500 truncate max-w-[160px]">{logoFile.name}</span>
-              )}
-            </div>
-            {!company && (
-              <p className="text-xs text-gray-400 mt-1">JPEG, PNG ou WEBP · máx. 5 MB</p>
-            )}
-          </div>
-          <div>
-            <label className="label">Chave PIX {!company && <span className="text-red-500">*</span>}</label>
-            <input
-              type="text"
-              className="input"
-              value={companyForm.pixKey}
-              onChange={(e) => setCompanyForm((p) => ({ ...p, pixKey: e.target.value }))}
-              placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"
-              maxLength={150}
-              required={!company}
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              {!company
-                ? 'Obrigatório. Será exibida ao vencedor para realizar o pagamento via PIX.'
-                : 'Sua chave PIX será exibida ao vencedor para realizar o pagamento via PIX.'}
-            </p>
-          </div>
-
-          {deleteMutation.isError && (
-            <p className="text-sm text-red-600">
-              Não é possível excluir a empresa com leilões em andamento.
-            </p>
-          )}
-
-          {company ? (
-            <div className="space-y-3 pt-1">
-              <button type="submit" className="btn-primary" disabled={companyMutation.isPending}>
-                {companyMutation.isPending ? 'Salvando...' : 'Salvar PIX'}
-              </button>
-              <div className="flex items-center gap-3">
-              {confirmDelete ? (
-                <>
-                  <span className="text-sm text-gray-600">Confirma a exclusão da empresa?</span>
-                  <button
-                    type="button"
-                    className="btn-danger text-sm"
-                    onClick={() => deleteMutation.mutate()}
-                    disabled={deleteMutation.isPending}
-                  >
-                    {deleteMutation.isPending ? 'Excluindo...' : 'Confirmar'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary text-sm"
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    Cancelar
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="btn-danger text-sm"
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  Deletar empresa
-                </button>
-              )}
+              <div>
+                <p className="font-semibold text-gray-900">{company.name}</p>
+                {company.description && <p className="text-sm text-gray-500 mt-0.5">{company.description}</p>}
               </div>
             </div>
-          ) : (
-            <button type="submit" className="btn-primary" disabled={companyMutation.isPending}>
-              {companyMutation.isPending ? 'Salvando...' : 'Cadastrar empresa'}
-            </button>
-          )}
-        </form>
+            <div className="border-t border-gray-100 pt-3">
+              <p className="text-xs text-gray-400 mb-0.5">Chave PIX</p>
+              <p className="text-sm font-medium text-gray-800">{company.pixKey ?? '—'}</p>
+            </div>
+            <div className="border-t border-gray-100 pt-3">
+              {deleteMutation.isError && (
+                <p className="text-sm text-red-600 mb-2">Não é possível excluir a empresa com leilões em andamento.</p>
+              )}
+              {confirmDelete ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">Confirma a exclusão?</span>
+                  <button type="button" className="btn-danger text-sm" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
+                    {deleteMutation.isPending ? 'Excluindo...' : 'Confirmar'}
+                  </button>
+                  <button type="button" className="btn-secondary text-sm" onClick={() => setConfirmDelete(false)}>Cancelar</button>
+                </div>
+              ) : (
+                <button type="button" className="btn-danger text-sm" onClick={() => setConfirmDelete(true)}>Deletar empresa</button>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Formulário — cadastro ou edição */
+          <form onSubmit={handleCompanySubmit} className="space-y-4">
+            <div>
+              <label className="label">Nome da empresa *</label>
+              <input
+                type="text"
+                className="input"
+                value={companyForm.name}
+                onChange={(e) => setCompanyForm((p) => ({ ...p, name: e.target.value }))}
+                required
+                minLength={2}
+                maxLength={255}
+                disabled={!!company}
+              />
+              {company && <p className="text-xs text-gray-400 mt-1">O nome da empresa não pode ser alterado.</p>}
+            </div>
+            <div>
+              <label className="label">Descrição</label>
+              <textarea
+                className="input resize-none"
+                rows={2}
+                value={companyForm.description}
+                onChange={(e) => setCompanyForm((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Breve descrição da sua empresa"
+              />
+            </div>
+            <div>
+              <label className="label">Logo da empresa</label>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleLogoChange}
+              />
+              <div className="flex items-center gap-4">
+                {(logoPreview || companyForm.logoUrl) && (
+                  <img
+                    src={logoPreview ?? companyForm.logoUrl}
+                    alt="Preview do logo"
+                    className="h-16 w-16 rounded-lg object-cover border border-gray-200 shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                )}
+                <button type="button" onClick={() => logoInputRef.current?.click()} className="btn-secondary text-sm">
+                  {companyForm.logoUrl || logoPreview ? 'Trocar logo' : 'Selecionar logo'}
+                </button>
+                {logoFile && <span className="text-sm text-gray-500 truncate max-w-[160px]">{logoFile.name}</span>}
+              </div>
+              <p className="text-xs text-gray-400 mt-1">JPEG, PNG ou WEBP · máx. 5 MB</p>
+            </div>
+            <div>
+              <label className="label">Chave PIX {!company && <span className="text-red-500">*</span>}</label>
+              <input
+                type="text"
+                className="input"
+                value={companyForm.pixKey}
+                onChange={(e) => setCompanyForm((p) => ({ ...p, pixKey: e.target.value }))}
+                placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"
+                maxLength={150}
+                required={!company}
+              />
+              <p className="text-xs text-gray-400 mt-1">Será exibida ao vencedor para realizar o pagamento via PIX.</p>
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button type="submit" className="btn-primary" disabled={companyMutation.isPending}>
+                {companyMutation.isPending ? 'Salvando...' : company ? 'Salvar alterações' : 'Cadastrar empresa'}
+              </button>
+              {company && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setEditingCompany(false)
+                    setLogoFile(null)
+                    setLogoPreview(null)
+                    setCompanyForm({ name: company.name, description: company.description ?? '', logoUrl: company.logoUrl ?? '', pixKey: company.pixKey ?? '' })
+                  }}
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
+          </form>
+        )}
       </div>
     </div>
   )
