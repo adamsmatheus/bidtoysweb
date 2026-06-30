@@ -4,7 +4,7 @@ import { userApi } from '@/api/userApi'
 import { useNotificationStore } from '@/store/notificationStore'
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import type { LoginRequest, RegisterRequest } from '@/types/auth'
+import type { LoginRequest, RegisterRequest, VerifyEmailRequest } from '@/types/auth'
 
 export function useLogin() {
   const { setToken, setName } = useAuthStore()
@@ -26,11 +26,18 @@ export function useLogin() {
   })
 }
 
-export function useRegister() {
+export function useRegister(onSuccess?: () => void) {
+  return useMutation({
+    mutationFn: (data: RegisterRequest) => authApi.register(data),
+    onSuccess,
+  })
+}
+
+export function useVerifyEmail() {
   const navigate = useNavigate()
 
   return useMutation({
-    mutationFn: (data: RegisterRequest) => authApi.register(data),
+    mutationFn: (data: VerifyEmailRequest) => authApi.verifyEmail(data),
     onSuccess: () => navigate('/login'),
   })
 }

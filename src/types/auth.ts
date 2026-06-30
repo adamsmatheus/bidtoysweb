@@ -11,13 +11,13 @@ export interface RegisterRequest {
   name: string
   email: string
   password: string
-  whatsappNumber: string
-  verificationCode: string
+  phoneNumber: string
   address: AddressRequest
 }
 
-export interface SendWhatsAppCodeRequest {
-  phoneNumber: string
+export interface VerifyEmailRequest {
+  email: string
+  code: string
 }
 
 export interface LoginRequest {
