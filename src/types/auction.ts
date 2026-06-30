@@ -90,11 +90,21 @@ export interface UpdateShipmentStatusRequest {
   trackingCode?: string
 }
 
+export interface BuyerAddress {
+  cep: string
+  street: string
+  city: string
+  state: string
+  number: string
+  complement: string | null
+}
+
 export interface BuyerSummaryResponse {
   buyerId: string
   buyerName: string
   buyerEmail: string
   buyerPhone: string | null
+  buyerAddress: BuyerAddress | null
   auctionCount: number
   totalAmount: number
   auctions: BuyerAuctionItem[]

@@ -22,6 +22,7 @@ const SHIPMENT_LABEL: Record<string, { label: string; className: string; highlig
 function BuyerCard({ buyer }: { buyer: BuyerSummaryResponse }) {
   const [expanded, setExpanded] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
+  const [showAddress, setShowAddress] = useState(false)
 
   return (
     <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100">
@@ -41,6 +42,43 @@ function BuyerCard({ buyer }: { buyer: BuyerSummaryResponse }) {
             </p>
           </div>
         </button>
+
+        {/* Botão de endereço do comprador */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowAddress((v) => !v)}
+            className={`p-2 rounded-full transition-colors ${showAddress ? 'bg-green-100 text-green-600' : 'text-gray-400 hover:text-green-500 hover:bg-green-50'}`}
+            title="Ver endereço do comprador"
+          >
+            <span className="material-symbols-outlined text-[20px]">location_on</span>
+          </button>
+
+          {showAddress && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowAddress(false)} />
+              <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 z-20 w-72 bg-white rounded-2xl shadow-xl ring-1 ring-gray-200 p-4 space-y-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Endereço do comprador</p>
+                {buyer.buyerAddress ? (
+                  <>
+                    <div className="flex items-start gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-green-500 shrink-0 mt-0.5">home</span>
+                      <div className="text-sm text-gray-800 space-y-0.5">
+                        <p>{buyer.buyerAddress.street}, {buyer.buyerAddress.number}{buyer.buyerAddress.complement ? ` — ${buyer.buyerAddress.complement}` : ''}</p>
+                        <p>{buyer.buyerAddress.city} — {buyer.buyerAddress.state}</p>
+                        <p className="text-gray-500">CEP: {buyer.buyerAddress.cep}</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-gray-300 shrink-0">location_off</span>
+                    <span className="text-sm text-gray-400">Endereço não informado</span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Botão de informações do comprador */}
         <div className="relative shrink-0">
