@@ -23,6 +23,8 @@ export function ProfilePage() {
 
   const [form, setForm] = useState({ name: '', phoneNumber: '' })
   const [companyForm, setCompanyForm] = useState({ name: '', description: '', logoUrl: '', pixKey: '' })
+  const [editingAddress, setEditingAddress] = useState(false)
+  const [addressForm, setAddressForm] = useState({ cep: '', street: '', city: '', state: '', number: '', complement: '' })
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -32,6 +34,16 @@ export function ProfilePage() {
   useEffect(() => {
     if (user) {
       setForm({ name: user.name, phoneNumber: user.phoneNumber ?? '' })
+      if (user.address) {
+        setAddressForm({
+          cep: user.address.cep,
+          street: user.address.street,
+          city: user.address.city,
+          state: user.address.state,
+          number: user.address.number,
+          complement: user.address.complement ?? '',
+        })
+      }
     }
   }, [user])
 
@@ -117,6 +129,27 @@ export function ProfilePage() {
     companyMutation.mutate()
   }
 
+  const addressMutation = useMutation({
+    mutationFn: () => userApi.updateAddress({
+      cep: addressForm.cep,
+      street: addressForm.street,
+      city: addressForm.city,
+      state: addressForm.state,
+      number: addressForm.number,
+      complement: addressForm.complement || undefined,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me'] })
+      setEditingAddress(false)
+      setToast({ message: 'Endereço atualizado com sucesso!', type: 'success' })
+    },
+  })
+
+  const handleAddressSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    addressMutation.mutate()
+  }
+
   if (!user) {
     return <div className="max-w-xl mx-auto px-4 py-8 animate-pulse space-y-3">
       <div className="h-6 bg-gray-200 rounded w-1/3" />
@@ -177,6 +210,77 @@ export function ProfilePage() {
             {userMutation.isPending ? 'Salvando...' : 'Salvar'}
           </button>
         </form>
+      </div>
+
+      {/* Endereço */}
+      <div className="card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Meu Endereço</h2>
+            <p className="text-sm text-gray-500">Usado para envio dos arremates.</p>
+          </div>
+          {!editingAddress && (
+            <button
+              type="button"
+              onClick={() => setEditingAddress(true)}
+              className="flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-800 font-medium transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]">edit</span>
+              {user.address ? 'Editar' : 'Adicionar'}
+            </button>
+          )}
+        </div>
+
+        {!editingAddress ? (
+          user.address ? (
+            <div className="space-y-1 text-sm text-gray-700">
+              <p>{user.address.street}, {user.address.number}{user.address.complement ? ` - ${user.address.complement}` : ''}</p>
+              <p>{user.address.city} — {user.address.state}</p>
+              <p className="text-gray-500">CEP: {user.address.cep}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">Nenhum endereço cadastrado.</p>
+          )
+        ) : (
+          <form onSubmit={handleAddressSubmit} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">CEP *</label>
+                <input type="text" className="input" value={addressForm.cep} onChange={(e) => setAddressForm((p) => ({ ...p, cep: e.target.value }))} required maxLength={9} placeholder="00000-000" />
+              </div>
+              <div>
+                <label className="label">Estado *</label>
+                <input type="text" className="input" value={addressForm.state} onChange={(e) => setAddressForm((p) => ({ ...p, state: e.target.value.toUpperCase() }))} required maxLength={2} placeholder="SP" />
+              </div>
+            </div>
+            <div>
+              <label className="label">Rua / Logradouro *</label>
+              <input type="text" className="input" value={addressForm.street} onChange={(e) => setAddressForm((p) => ({ ...p, street: e.target.value }))} required />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Número *</label>
+                <input type="text" className="input" value={addressForm.number} onChange={(e) => setAddressForm((p) => ({ ...p, number: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="label">Complemento</label>
+                <input type="text" className="input" value={addressForm.complement} onChange={(e) => setAddressForm((p) => ({ ...p, complement: e.target.value }))} placeholder="Apto, bloco..." />
+              </div>
+            </div>
+            <div>
+              <label className="label">Cidade *</label>
+              <input type="text" className="input" value={addressForm.city} onChange={(e) => setAddressForm((p) => ({ ...p, city: e.target.value }))} required />
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button type="submit" className="btn-primary" disabled={addressMutation.isPending}>
+                {addressMutation.isPending ? 'Salvando...' : 'Salvar endereço'}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setEditingAddress(false)}>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       {/* Empresa */}

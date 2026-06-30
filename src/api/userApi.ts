@@ -1,5 +1,5 @@
 import http from './http'
-import type { UserResponse, UpdateUserRequest } from '@/types/user'
+import type { UserResponse, UpdateUserRequest, UpdateAddressRequest } from '@/types/user'
 
 export const userApi = {
   me: () =>
@@ -7,4 +7,7 @@ export const userApi = {
 
   update: (id: string, data: UpdateUserRequest) =>
     http.put<UserResponse>(`/users/${id}`, data).then((r) => r.data),
+
+  updateAddress: (data: UpdateAddressRequest) =>
+    http.put<UserResponse>('/users/me/address', data).then((r) => r.data),
 }

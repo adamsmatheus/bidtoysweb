@@ -27,3 +27,12 @@ export interface UpdateUserRequest {
   phoneNumber?: string
   whatsappEnabled?: boolean
 }
+
+export interface UpdateAddressRequest {
+  cep: string
+  street: string
+  city: string
+  state: string
+  number: string
+  complement?: string
+}
