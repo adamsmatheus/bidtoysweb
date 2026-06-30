@@ -25,6 +25,8 @@ export function ProfilePage() {
   const [companyForm, setCompanyForm] = useState({ name: '', description: '', logoUrl: '', pixKey: '' })
   const [editingAddress, setEditingAddress] = useState(false)
   const [addressForm, setAddressForm] = useState({ cep: '', street: '', city: '', state: '', number: '', complement: '' })
+  const [isFetchingCep, setIsFetchingCep] = useState(false)
+  const [cepError, setCepError] = useState<string | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -150,6 +152,30 @@ export function ProfilePage() {
     addressMutation.mutate()
   }
 
+  const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 8)
+    const formatted = raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw
+    setAddressForm((p) => ({ ...p, cep: formatted, street: '', city: '', state: '' }))
+    setCepError(null)
+
+    if (raw.length === 8) {
+      setIsFetchingCep(true)
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${raw}/json/`)
+        const data = await res.json()
+        if (data.erro) {
+          setCepError('CEP não encontrado.')
+        } else {
+          setAddressForm((p) => ({ ...p, cep: formatted, street: data.logradouro, city: data.localidade, state: data.uf }))
+        }
+      } catch {
+        setCepError('Erro ao buscar CEP. Preencha manualmente.')
+      } finally {
+        setIsFetchingCep(false)
+      }
+    }
+  }
+
   if (!user) {
     return <div className="max-w-xl mx-auto px-4 py-8 animate-pulse space-y-3">
       <div className="h-6 bg-gray-200 rounded w-1/3" />
@@ -246,7 +272,9 @@ export function ProfilePage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">CEP *</label>
-                <input type="text" className="input" value={addressForm.cep} onChange={(e) => setAddressForm((p) => ({ ...p, cep: e.target.value }))} required maxLength={9} placeholder="00000-000" />
+                <input type="text" className="input" value={addressForm.cep} onChange={handleCepChange} required maxLength={9} placeholder="00000-000" />
+                {isFetchingCep && <p className="text-xs text-gray-500 mt-1">Buscando endereço...</p>}
+                {cepError && <p className="text-xs text-red-600 mt-1">{cepError}</p>}
               </div>
               <div>
                 <label className="label">Estado *</label>
