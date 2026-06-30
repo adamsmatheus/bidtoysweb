@@ -56,13 +56,13 @@ function BuyerCard({ buyer }: { buyer: BuyerSummaryResponse }) {
             <>
               {/* Overlay para fechar ao clicar fora */}
               <div className="fixed inset-0 z-10" onClick={() => setShowInfo(false)} />
-              <div className="absolute right-0 top-10 z-20 w-64 bg-white rounded-2xl shadow-xl ring-1 ring-gray-200 p-4 space-y-3">
+              <div className="absolute right-0 top-10 z-20 w-80 bg-white rounded-2xl shadow-xl ring-1 ring-gray-200 p-4 space-y-3">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contato do comprador</p>
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-blue-500 shrink-0">mail</span>
+                <div className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-blue-500 shrink-0 mt-0.5">mail</span>
                   <a
                     href={`mailto:${buyer.buyerEmail}`}
-                    className="text-sm text-gray-800 hover:text-blue-600 truncate transition-colors"
+                    className="text-sm text-gray-800 hover:text-blue-600 break-all transition-colors"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {buyer.buyerEmail}
