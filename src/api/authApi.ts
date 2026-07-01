@@ -1,13 +1,10 @@
 import http from './http'
-import type { LoginRequest, LoginResponse, RegisterRequest, VerifyEmailRequest } from '@/types/auth'
+import type { LoginRequest, LoginResponse, RegisterRequest } from '@/types/auth'
 import type { UserResponse } from '@/types/user'
 
 export const authApi = {
   register: (data: RegisterRequest) =>
     http.post<UserResponse>('/auth/register', data).then((r) => r.data),
-
-  verifyEmail: (data: VerifyEmailRequest) =>
-    http.post('/auth/verify-email', data),
 
   login: (data: LoginRequest) =>
     http.post<LoginResponse>('/auth/login', data).then((r) => r.data),
@@ -17,4 +14,10 @@ export const authApi = {
 
   resetPassword: (data: { email: string; code: string; newPassword: string }) =>
     http.post('/auth/reset-password', data),
+
+  requestTelegramVerification: (phoneNumber: string) =>
+    http.post<{ token: string; deepLink: string }>('/auth/telegram/request-verification', { phoneNumber }).then((r) => r.data),
+
+  checkTelegramVerification: (token: string) =>
+    http.get<{ verified: boolean }>(`/auth/telegram/check/${token}`).then((r) => r.data),
 }

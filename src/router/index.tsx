@@ -18,6 +18,7 @@ import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
 import { PendingAuctionsPage } from '@/pages/admin/PendingAuctionsPage'
 import { AuctionReviewPage } from '@/pages/admin/AuctionReviewPage'
+import { BuyerReportsPage } from '@/pages/admin/BuyerReportsPage'
 
 function RootRedirect() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated())
@@ -53,6 +54,7 @@ export function AppRouter() {
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/auctions" element={<PendingAuctionsPage />} />
             <Route path="/admin/auctions/:id" element={<AuctionReviewPage />} />
+            <Route path="/admin/buyer-reports" element={<BuyerReportsPage />} />
           </Route>
 
           {/* Default */}
