@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { userApi } from '@/api/userApi'
 import { companyApi } from '@/api/companyApi'
@@ -32,6 +32,45 @@ export function ProfilePage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
+
+  const [telegramLinkToken, setTelegramLinkToken] = useState<string | null>(null)
+  const [telegramPolling, setTelegramPolling] = useState(false)
+
+  const telegramLinkMutation = useMutation({
+    mutationFn: () => userApi.requestTelegramLink(),
+    onSuccess: (data) => {
+      setTelegramLinkToken(data.token)
+      setTelegramPolling(true)
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      if (isMobile) {
+        window.location.href = data.deepLink
+      } else {
+        window.open(data.deepLink, '_blank')
+      }
+    },
+  })
+
+  const stopPolling = useCallback(() => {
+    setTelegramPolling(false)
+    setTelegramLinkToken(null)
+  }, [])
+
+  useEffect(() => {
+    if (!telegramPolling || !telegramLinkToken) return
+    const interval = setInterval(async () => {
+      try {
+        const { linked } = await userApi.checkTelegramLinkStatus(telegramLinkToken)
+        if (linked) {
+          stopPolling()
+          queryClient.invalidateQueries({ queryKey: ['me'] })
+          setToast({ message: 'Telegram vinculado com sucesso!', type: 'success' })
+        }
+      } catch {
+        // silencioso
+      }
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [telegramPolling, telegramLinkToken, stopPolling, queryClient])
 
   useEffect(() => {
     if (user) {
@@ -204,6 +243,40 @@ export function ProfilePage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Telegram */}
+      <div className="card p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Notificações via Telegram</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {user.telegramConnected
+                ? 'Seu Telegram está vinculado. Você receberá notificações de leilões.'
+                : 'Vincule seu Telegram para receber notificações quando vencer ou perder um leilão.'}
+            </p>
+          </div>
+          {user.telegramConnected ? (
+            <span className="flex items-center gap-1.5 text-sm font-medium text-green-600">
+              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+              Vinculado
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="btn-primary text-sm whitespace-nowrap"
+              onClick={() => telegramLinkMutation.mutate()}
+              disabled={telegramLinkMutation.isPending || telegramPolling}
+            >
+              {telegramPolling ? 'Aguardando...' : 'Conectar Telegram'}
+            </button>
+          )}
+        </div>
+        {telegramPolling && (
+          <p className="text-xs text-gray-400 mt-3">
+            Abrimos o Telegram para você. Envie a mensagem para o bot e aguarde a confirmação.
+          </p>
+        )}
       </div>
 
       {/* Endereço */}

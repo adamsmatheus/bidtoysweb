@@ -15,7 +15,7 @@ export interface UserResponse {
   name: string
   email: string
   phoneNumber: string | null
-  whatsappEnabled: boolean
+  telegramConnected: boolean
   role: UserRole
   status: UserStatus
   createdAt: string

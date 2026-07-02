@@ -10,4 +10,10 @@ export const userApi = {
 
   updateAddress: (data: UpdateAddressRequest) =>
     http.put<UserResponse>('/users/me/address', data).then((r) => r.data),
+
+  requestTelegramLink: () =>
+    http.post<{ token: string; deepLink: string }>('/users/me/telegram/request-link').then((r) => r.data),
+
+  checkTelegramLinkStatus: (token: string) =>
+    http.get<{ linked: boolean }>(`/users/me/telegram/link-status/${token}`).then((r) => r.data),
 }
