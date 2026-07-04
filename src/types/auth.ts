@@ -11,7 +11,7 @@ export interface RegisterRequest {
   name: string
   email: string
   password: string
-  telegramToken: string
+  whatsappToken: string
   address: AddressRequest
 }
 

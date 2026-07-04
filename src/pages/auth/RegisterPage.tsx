@@ -117,13 +117,13 @@ export function RegisterPage() {
   const [isFetchingCep, setIsFetchingCep] = useState(false)
   const [cepError, setCepError] = useState<string | null>(null)
 
-  // Telegram verification state
-  const [telegramToken, setTelegramToken] = useState('')
-  const [telegramDeepLink, setTelegramDeepLink] = useState('')
-  const [isRequestingTelegram, setIsRequestingTelegram] = useState(false)
-  const [telegramError, setTelegramError] = useState<string | null>(null)
-  const [telegramVerified, setTelegramVerified] = useState(false)
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // WhatsApp verification state
+  const [whatsappToken, setWhatsappToken] = useState('')
+  const [whatsappCode, setWhatsappCode] = useState('')
+  const [isRequestingWhatsApp, setIsRequestingWhatsApp] = useState(false)
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false)
+  const [whatsappError, setWhatsappError] = useState<string | null>(null)
+  const [whatsappVerified, setWhatsappVerified] = useState(false)
 
   const register = useRegister(() => navigate('/login'))
 
@@ -163,47 +163,35 @@ export function RegisterPage() {
       return
     }
     setPasswordError(null)
-    requestTelegramVerification()
+    setStep('verify-phone')
   }
 
-  const requestTelegramVerification = async () => {
-    setIsRequestingTelegram(true)
-    setTelegramError(null)
+  const requestWhatsAppVerification = async () => {
+    setIsRequestingWhatsApp(true)
+    setWhatsappError(null)
+    setWhatsappCode('')
     try {
-      const res = await authApi.requestTelegramVerification(fullPhone())
-      setTelegramToken(res.token)
-      setTelegramDeepLink(res.deepLink)
-      setTelegramVerified(false)
-      setStep('verify-phone')
-      startPolling(res.token)
+      const res = await authApi.requestWhatsAppVerification(fullPhone())
+      setWhatsappToken(res.token)
     } catch (err: any) {
-      setTelegramError(err?.response?.data?.message ?? 'Erro ao iniciar verificação.')
+      setWhatsappError(err?.response?.data?.message ?? 'Erro ao enviar código. Verifique o número.')
     } finally {
-      setIsRequestingTelegram(false)
+      setIsRequestingWhatsApp(false)
     }
   }
 
-  const startPolling = (token: string) => {
-    if (pollingRef.current) clearInterval(pollingRef.current)
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await authApi.checkTelegramVerification(token)
-        if (res.verified) {
-          clearInterval(pollingRef.current!)
-          pollingRef.current = null
-          setTelegramVerified(true)
-        }
-      } catch {
-        // ignore polling errors
-      }
-    }, 3000)
-  }
-
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current)
+  const handleVerifyCode = async () => {
+    setIsVerifyingCode(true)
+    setWhatsappError(null)
+    try {
+      await authApi.verifyWhatsAppCode(whatsappToken, whatsappCode)
+      setWhatsappVerified(true)
+    } catch (err: any) {
+      setWhatsappError(err?.response?.data?.message ?? 'Código inválido ou expirado.')
+    } finally {
+      setIsVerifyingCode(false)
     }
-  }, [])
+  }
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault()
@@ -211,7 +199,7 @@ export function RegisterPage() {
       name: `${form.firstName} ${form.lastName}`.trim(),
       email: form.email,
       password: form.password,
-      telegramToken,
+      whatsappToken,
       address: {
         cep: form.cep,
         street: form.street,
@@ -298,67 +286,75 @@ export function RegisterPage() {
                 <input type="tel" className="input flex-1" value={form.phoneNumber} onChange={set('phoneNumber')} placeholder="11 99999-9999" required />
               </div>
             </div>
-            {telegramError && <p className="text-sm text-red-600">{telegramError}</p>}
-            <button type="submit" className="btn-primary w-full" disabled={isRequestingTelegram}>
-              {isRequestingTelegram ? 'Aguarde...' : 'Próximo'}
+            <button type="submit" className="btn-primary w-full">
+              Próximo
             </button>
           </form>
         )}
 
-        {/* Step 2: Verificação Telegram */}
+        {/* Step 2: Verificação WhatsApp */}
         {step === 'verify-phone' && (
           <div className="space-y-5">
-            {!telegramVerified ? (
-              <>
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-                  <span className="material-symbols-outlined text-3xl text-blue-500 block mb-2">smartphone</span>
-                  <p className="text-sm font-semibold text-blue-900 mb-1">Verifique seu celular</p>
-                  <p className="text-xs text-blue-700">
-                    Clique no botão abaixo para abrir o Telegram e confirmar seu número <strong>{fullPhone()}</strong>.
-                  </p>
-                </div>
-
-                <a
-                  href={telegramDeepLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary w-full flex items-center justify-center gap-2 text-center"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
-                  </svg>
-                  Verificar no Telegram
-                </a>
-
-                <div className="flex items-center gap-2 text-xs text-gray-500 justify-center">
-                  <span className="animate-spin material-symbols-outlined text-[16px] text-blue-400">progress_activity</span>
-                  Aguardando verificação...
-                </div>
-
-                <button
-                  type="button"
-                  className="text-sm text-primary-600 hover:underline w-full text-center"
-                  onClick={requestTelegramVerification}
-                  disabled={isRequestingTelegram}
-                >
-                  Reenviar link
-                </button>
-              </>
-            ) : (
+            {whatsappVerified ? (
               <div className="text-center py-4">
                 <span className="material-symbols-outlined text-5xl text-green-500 block mb-3">check_circle</span>
-                <p className="font-bold text-gray-900 mb-1">Celular verificado!</p>
+                <p className="font-bold text-gray-900 mb-1">WhatsApp verificado!</p>
                 <p className="text-sm text-gray-500 mb-5">Agora preencha seu endereço para concluir o cadastro.</p>
                 <button className="btn-primary w-full" onClick={() => setStep('address')}>
                   Continuar
                 </button>
               </div>
-            )}
+            ) : (
+              <>
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                  <span className="material-symbols-outlined text-3xl text-green-600 block mb-2">smartphone</span>
+                  <p className="text-sm font-semibold text-green-900 mb-1">Verifique seu celular</p>
+                  <p className="text-xs text-green-700">
+                    Enviaremos um código de 6 dígitos para <strong>{fullPhone()}</strong> via WhatsApp.
+                  </p>
+                </div>
 
-            {!telegramVerified && (
-              <button type="button" className="btn-secondary w-full" onClick={() => setStep('form')}>
-                Voltar
-              </button>
+                <button
+                  type="button"
+                  className="btn-primary w-full"
+                  onClick={requestWhatsAppVerification}
+                  disabled={isRequestingWhatsApp}
+                >
+                  {isRequestingWhatsApp ? 'Enviando...' : whatsappToken ? 'Reenviar código' : 'Enviar código por WhatsApp'}
+                </button>
+
+                {whatsappToken && (
+                  <>
+                    <div>
+                      <label className="label">Código de verificação</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className="input text-center tracking-widest text-lg"
+                        value={whatsappCode}
+                        onChange={(e) => setWhatsappCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        maxLength={6}
+                        autoFocus
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-primary w-full"
+                      onClick={handleVerifyCode}
+                      disabled={whatsappCode.length < 6 || isVerifyingCode}
+                    >
+                      {isVerifyingCode ? 'Verificando...' : 'Confirmar código'}
+                    </button>
+                  </>
+                )}
+
+                {whatsappError && <p className="text-sm text-red-600 text-center">{whatsappError}</p>}
+
+                <button type="button" className="btn-secondary w-full" onClick={() => setStep('form')}>
+                  Voltar
+                </button>
+              </>
             )}
           </div>
         )}

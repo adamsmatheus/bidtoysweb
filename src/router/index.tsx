@@ -62,6 +62,9 @@ export function AppRouter() {
           <Route path="*" element={<RootRedirect />} />
         </Routes>
       </main>
+      <footer className="border-t border-gray-200 bg-white py-4 text-center text-xs text-gray-400">
+        Bid Toys — MATHEUS MIRANDA ADAMS CONSULTORIA EM TECNOLOGIA DA INFORMACAO LTDA &mdash; bidtoys.com.br
+      </footer>
     </>
   )
 }

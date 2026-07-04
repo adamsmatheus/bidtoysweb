@@ -15,9 +15,9 @@ export const authApi = {
   resetPassword: (data: { email: string; code: string; newPassword: string }) =>
     http.post('/auth/reset-password', data),
 
-  requestTelegramVerification: (phoneNumber: string) =>
-    http.post<{ token: string; deepLink: string }>('/auth/telegram/request-verification', { phoneNumber }).then((r) => r.data),
+  requestWhatsAppVerification: (phoneNumber: string) =>
+    http.post<{ token: string }>('/auth/whatsapp/request-verification', { phoneNumber }).then((r) => r.data),
 
-  checkTelegramVerification: (token: string) =>
-    http.get<{ verified: boolean }>(`/auth/telegram/check/${token}`).then((r) => r.data),
+  verifyWhatsAppCode: (token: string, code: string) =>
+    http.post<{ verified: boolean }>('/auth/whatsapp/verify-code', { token, code }).then((r) => r.data),
 }
