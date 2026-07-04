@@ -3,6 +3,7 @@ export type AppNotificationType =
   | 'PAYMENT_DECLARED'
   | 'PAYMENT_CONFIRMED'
   | 'PAYMENT_DISPUTED'
+  | 'DISPUTE_MESSAGE'
 
 export interface AppNotification {
   id: string

@@ -9,6 +9,7 @@ import type {
   CancelAuctionRequest,
   ShipmentStatus,
   UpdateShipmentStatusRequest,
+  DisputeMessageResponse,
 } from '@/types/auction'
 import type { PageResponse } from '@/types/bid'
 
@@ -50,6 +51,9 @@ export const auctionApi = {
   deleteImage: (id: string, imageId: string) =>
     http.delete(`/auctions/${id}/images/${imageId}`),
 
+  setCoverImage: (id: string, imageId: string) =>
+    http.put(`/auctions/${id}/images/${imageId}/cover`),
+
   listWon: (params?: { status?: AuctionStatus; holdShipment?: boolean; page?: number; size?: number }) =>
     http.get<PageResponse<AuctionResponse>>('/auctions/won', { params }).then((r) => r.data),
 
@@ -72,12 +76,21 @@ export const auctionApi = {
   confirmPayment: (id: string) =>
     http.post<AuctionResponse>(`/auctions/${id}/confirm-payment`).then((r) => r.data),
 
-  disputePayment: (id: string) =>
-    http.post<AuctionResponse>(`/auctions/${id}/dispute-payment`).then((r) => r.data),
+  disputePayment: (id: string, reason: string) =>
+    http.post<AuctionResponse>(`/auctions/${id}/dispute-payment`, { reason }).then((r) => r.data),
+
+  listDisputeMessages: (id: string) =>
+    http.get<DisputeMessageResponse[]>(`/auctions/${id}/dispute-messages`).then((r) => r.data),
+
+  sendDisputeMessage: (id: string, message: string) =>
+    http.post<DisputeMessageResponse>(`/auctions/${id}/dispute-messages`, { message }).then((r) => r.data),
 
   updateShipmentStatus: (id: string, data: UpdateShipmentStatusRequest) =>
     http.patch<AuctionResponse>(`/auctions/${id}/shipment-status`, data).then((r) => r.data),
 
   requestDelivery: (id: string) =>
     http.post<AuctionResponse>(`/auctions/${id}/request-delivery`).then((r) => r.data),
+
+  reportAuction: (id: string, reason: string) =>
+    http.post(`/auction-reports/${id}`, { reason }).then((r) => r.data),
 }

@@ -48,16 +48,24 @@ const DELETABLE_STATUSES: AuctionStatus[] = [
 function MyAuctionCard({ auction }: { auction: AuctionResponse }) {
   const queryClient = useQueryClient()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const coverImage = auction.images.find((img) => img.position === 0) ?? auction.images[0]
+  const sortedImages = [...auction.images].sort((a, b) => a.position - b.position)
+  const [imageIndex, setImageIndex] = useState(0)
+  const currentImage = sortedImages[imageIndex] ?? null
   const badge = STATUS_BADGE[auction.status]
   const isDraft = auction.status === 'DRAFT'
   const isRejected = auction.status === 'REJECTED'
   const isSubmittable = isDraft || isRejected
+  const isReady = auction.status === 'READY_TO_START'
   const isFinished = auction.status === 'FINISHED_WITH_WINNER' || auction.status === 'FINISHED_NO_BIDS'
   const canDelete = DELETABLE_STATUSES.includes(auction.status)
 
   const submitMutation = useMutation({
     mutationFn: () => auctionApi.submit(auction.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-auctions'] }),
+  })
+
+  const startMutation = useMutation({
+    mutationFn: () => auctionApi.start(auction.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-auctions'] }),
   })
 
@@ -70,17 +78,46 @@ function MyAuctionCard({ auction }: { auction: AuctionResponse }) {
     <div className={`group bg-surface-container-lowest rounded-2xl p-5 shadow-sm ring-1 ring-outline-variant/10 flex flex-col transition-all hover:-translate-y-2 hover:shadow-xl hover:shadow-primary/5 ${isFinished ? 'opacity-80 hover:opacity-100' : ''}`}>
       {/* Image */}
       <div className="relative w-full aspect-square mb-5 rounded-xl overflow-hidden bg-surface-container-low">
-        {coverImage ? (
+        {currentImage ? (
           <img
-            src={coverImage.fileUrl}
+            src={currentImage.fileUrl}
             alt={auction.title}
-            className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${isFinished ? 'grayscale group-hover:grayscale-0' : ''}`}
+            className={`w-full h-full object-cover transition-transform duration-500 ${sortedImages.length <= 1 ? 'group-hover:scale-110' : ''} ${isFinished ? 'grayscale group-hover:grayscale-0' : ''}`}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-surface-container">
             <span className="material-symbols-outlined text-6xl text-outline-variant">image</span>
           </div>
         )}
+
+        {/* Prev/Next arrows */}
+        {sortedImages.length > 1 && (
+          <>
+            <button
+              onClick={(e) => { e.preventDefault(); setImageIndex((i) => (i - 1 + sortedImages.length) % sortedImages.length) }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60 z-10"
+            >
+              <span className="material-symbols-outlined text-base">chevron_left</span>
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); setImageIndex((i) => (i + 1) % sortedImages.length) }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60 z-10"
+            >
+              <span className="material-symbols-outlined text-base">chevron_right</span>
+            </button>
+            {/* Dots */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+              {sortedImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => { e.preventDefault(); setImageIndex(idx) }}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${idx === imageIndex ? 'bg-white scale-125' : 'bg-white/50'}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
         <div className="absolute top-4 left-4">
           <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm ${badge.className}`}>
             {badge.label}
@@ -145,6 +182,24 @@ function MyAuctionCard({ auction }: { auction: AuctionResponse }) {
             >
               <span className="material-symbols-outlined text-sm">send</span>
               {submitMutation.isPending ? 'Enviando...' : isRejected ? 'Reenviar para aprovação' : 'Enviar para aprovação'}
+            </button>
+            <button
+              onClick={() => setConfirmingDelete(true)}
+              className="p-3 rounded-full bg-error-container text-on-error-container active:scale-90 transition-all hover:bg-error/20"
+              title="Excluir leilão"
+            >
+              <span className="material-symbols-outlined text-sm">delete</span>
+            </button>
+          </div>
+        ) : isReady ? (
+          <div className="flex gap-2">
+            <button
+              onClick={() => startMutation.mutate()}
+              disabled={startMutation.isPending}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full font-bold text-xs text-white bg-green-500 hover:bg-green-600 active:scale-95 transition-all disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined text-sm">play_arrow</span>
+              {startMutation.isPending ? 'Iniciando...' : 'Iniciar Leilão'}
             </button>
             <button
               onClick={() => setConfirmingDelete(true)}

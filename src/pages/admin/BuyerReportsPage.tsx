@@ -208,7 +208,8 @@ export function BuyerReportsPage() {
           <SidebarLink to="/admin" icon="dashboard" label="Visão Geral" />
           <SidebarLink to="/admin/auctions" icon="pending_actions" label="Fila de Aprovação" />
           <SidebarLink to="/auctions" icon="gavel" label="Todos os Leilões" />
-          <SidebarLink to="/admin/buyer-reports" icon="flag" label="Reportes" active />
+          <SidebarLink to="/admin/buyer-reports" icon="flag" label="Report. Compradores" active />
+          <SidebarLink to="/admin/auction-reports" icon="report" label="Report. Leilões" />
         </nav>
       </aside>
 

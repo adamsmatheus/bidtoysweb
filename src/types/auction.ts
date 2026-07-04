@@ -52,6 +52,16 @@ export interface AuctionResponse {
   shipmentStatus: ShipmentStatus | null
   trackingCode: string | null
   paymentReceiptUrl: string | null
+  disputeReason: string | null
+}
+
+export interface DisputeMessageResponse {
+  id: string
+  auctionId: string
+  senderId: string
+  senderName: string
+  message: string
+  createdAt: string
 }
 
 export interface CreateAuctionRequest {

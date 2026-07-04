@@ -10,6 +10,7 @@ const ICON: Record<AppNotificationType, string> = {
   PAYMENT_DECLARED:  'payments',
   PAYMENT_CONFIRMED: 'check_circle',
   PAYMENT_DISPUTED:  'error',
+  DISPUTE_MESSAGE:   'forum',
 }
 
 const ICON_COLOR: Record<AppNotificationType, string> = {
@@ -17,6 +18,7 @@ const ICON_COLOR: Record<AppNotificationType, string> = {
   PAYMENT_DECLARED:  'text-blue-500',
   PAYMENT_CONFIRMED: 'text-green-500',
   PAYMENT_DISPUTED:  'text-red-500',
+  DISPUTE_MESSAGE:   'text-orange-500',
 }
 
 function timeAgo(iso: string): string {

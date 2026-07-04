@@ -53,7 +53,8 @@ export function AdminDashboardPage() {
           <SidebarLink to="/admin" icon="dashboard" label="Visão Geral" active />
           <SidebarLink to="/admin/auctions" icon="pending_actions" label="Fila de Aprovação" />
           <SidebarLink to="/auctions" icon="gavel" label="Todos os Leilões" />
-          <SidebarLink to="/admin/buyer-reports" icon="flag" label="Reportes" />
+          <SidebarLink to="/admin/buyer-reports" icon="flag" label="Report. Compradores" />
+          <SidebarLink to="/admin/auction-reports" icon="report" label="Report. Leilões" />
         </nav>
       </aside>
 

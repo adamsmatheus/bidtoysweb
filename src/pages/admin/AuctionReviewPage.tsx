@@ -11,6 +11,7 @@ export function AuctionReviewPage() {
   const queryClient = useQueryClient()
   const [rejectReason, setRejectReason] = useState('')
   const [showRejectForm, setShowRejectForm] = useState(false)
+  const [selectedImage, setSelectedImage] = useState(0)
 
   const { data: auction, isLoading } = useQuery({
     queryKey: ['auction', id],
@@ -90,6 +91,40 @@ export function AuctionReviewPage() {
           </div>
         </div>
       </div>
+
+      {auction.images.length > 0 && (
+        <div className="card p-4 mb-4 space-y-3">
+          <h3 className="font-semibold text-gray-900 text-sm">Fotos do leilão</h3>
+          <div className="w-full aspect-video rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+            <img
+              src={auction.images[selectedImage].fileUrl}
+              alt={`Imagem ${selectedImage + 1}`}
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
+          {auction.images.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {auction.images.map((img, idx) => (
+                <button
+                  key={img.id}
+                  onClick={() => setSelectedImage(idx)}
+                  className={`shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition-colors ${
+                    idx === selectedImage
+                      ? 'border-primary-600'
+                      : 'border-transparent opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img
+                    src={img.fileUrl}
+                    alt={`Miniatura ${idx + 1}`}
+                    className="w-full h-full object-contain bg-gray-50"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {canAct && (
         <div className="card p-6 space-y-4">

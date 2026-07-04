@@ -80,6 +80,13 @@ export function AuctionDetailPage() {
   const [paymentReceipt, setPaymentReceipt] = useState<File | null>(null)
   const [trackingCodeInput, setTrackingCodeInput] = useState('')
   const trackingRef = useRef<HTMLInputElement>(null)
+  const [showDisputeModal, setShowDisputeModal] = useState(false)
+  const [disputeReason, setDisputeReason] = useState('')
+  const [chatMessage, setChatMessage] = useState('')
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const chatBottomRef = useRef<HTMLDivElement>(null)
+  const receiptInDisputeRef = useRef<HTMLInputElement>(null)
 
   const TRANSITIONAL_STATUSES = ['PENDING_APPROVAL', 'READY_TO_START']
 
@@ -161,13 +168,55 @@ export function AuctionDetailPage() {
   })
 
   const disputePaymentMutation = useMutation({
-    mutationFn: () => auctionApi.disputePayment(id!),
+    mutationFn: (reason: string) => auctionApi.disputePayment(id!, reason),
     onSuccess: () => {
+      setShowDisputeModal(false)
+      setDisputeReason('')
       queryClient.invalidateQueries({ queryKey: ['auction', id] })
       queryClient.invalidateQueries({ queryKey: ['my-auctions'] })
       queryClient.invalidateQueries({ queryKey: ['my-wins'] })
+      queryClient.invalidateQueries({ queryKey: ['dispute-messages', id] })
     },
   })
+
+  const sendMessageMutation = useMutation({
+    mutationFn: (message: string) => auctionApi.sendDisputeMessage(id!, message),
+    onSuccess: () => {
+      setChatMessage('')
+      queryClient.invalidateQueries({ queryKey: ['dispute-messages', id] })
+    },
+  })
+
+  const { data: disputeMessages = [] } = useQuery({
+    queryKey: ['dispute-messages', id],
+    queryFn: () => auctionApi.listDisputeMessages(id!),
+    enabled: !!id && auction?.status === 'PAYMENT_DISPUTED',
+    refetchInterval: 8_000,
+  })
+
+  const uploadReceiptInDisputeMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const result = await auctionApi.uploadPaymentReceipt(id!, file)
+      await auctionApi.sendDisputeMessage(id!, `📎 Comprovante atualizado`)
+      return result
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dispute-messages', id] })
+      queryClient.invalidateQueries({ queryKey: ['auction', id] })
+    },
+  })
+
+  const reportAuctionMutation = useMutation({
+    mutationFn: (reason: string) => auctionApi.reportAuction(id!, reason),
+    onSuccess: () => {
+      setShowReportModal(false)
+      setReportReason('')
+    },
+  })
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [disputeMessages])
 
   const updateShipmentMutation = useMutation({
     mutationFn: (newStatus: ShipmentStatus) =>
@@ -279,6 +328,116 @@ export function AuctionDetailPage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Chat de disputa */}
+          {displayStatus === 'PAYMENT_DISPUTED' && (isSeller || isWinner) && (
+            <div className="card p-6 flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-red-500 text-base">forum</span>
+                  Chat de disputa
+                </h2>
+                <div className="flex gap-2">
+                  {isSeller && (
+                    <button
+                      className="btn-primary btn-sm text-xs"
+                      onClick={() => confirmPaymentMutation.mutate()}
+                      disabled={confirmPaymentMutation.isPending}
+                    >
+                      {confirmPaymentMutation.isPending ? 'Aguarde...' : 'Aceitar pagamento'}
+                    </button>
+                  )}
+                  {isSeller && (
+                    <button
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors border border-red-200"
+                      onClick={() => setShowReportModal(true)}
+                    >
+                      <span className="material-symbols-outlined text-sm">report</span>
+                      Reportar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
+                {disputeMessages.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-4">Nenhuma mensagem ainda.</p>
+                ) : (
+                  disputeMessages.map((msg) => {
+                    const isOwn = msg.senderId === userId
+                    return (
+                      <div key={msg.id} className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+                        <span className="text-[10px] text-gray-400 mb-0.5 px-1">{msg.senderName}</span>
+                        <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-snug ${
+                          isOwn
+                            ? 'bg-primary text-on-primary rounded-br-none'
+                            : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                        }`}>
+                          {msg.message}
+                        </div>
+                        <span className="text-[10px] text-gray-300 mt-0.5 px-1">
+                          {new Date(msg.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    )
+                  })
+                )}
+                <div ref={chatBottomRef} />
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-gray-100">
+                {isWinner && (
+                  <>
+                    <input
+                      ref={receiptInDisputeRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          uploadReceiptInDisputeMutation.mutate(file)
+                          e.target.value = ''
+                        }
+                      }}
+                    />
+                    <button
+                      className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors shrink-0"
+                      title="Reenviar comprovante"
+                      onClick={() => receiptInDisputeRef.current?.click()}
+                      disabled={uploadReceiptInDisputeMutation.isPending}
+                    >
+                      {uploadReceiptInDisputeMutation.isPending
+                        ? <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                        : <span className="material-symbols-outlined text-base">attach_file</span>
+                      }
+                    </button>
+                  </>
+                )}
+                <input
+                  type="text"
+                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition"
+                  placeholder="Escreva uma mensagem..."
+                  value={chatMessage}
+                  onChange={(e) => setChatMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && chatMessage.trim()) {
+                      e.preventDefault()
+                      sendMessageMutation.mutate(chatMessage.trim())
+                    }
+                  }}
+                  disabled={sendMessageMutation.isPending}
+                />
+                <button
+                  className="btn-primary btn-sm px-4"
+                  onClick={() => chatMessage.trim() && sendMessageMutation.mutate(chatMessage.trim())}
+                  disabled={!chatMessage.trim() || sendMessageMutation.isPending}
+                >
+                  <span className="material-symbols-outlined text-base">send</span>
+                </button>
+              </div>
             </div>
           )}
 
@@ -410,10 +569,23 @@ export function AuctionDetailPage() {
                 </button>
                 <button
                   className="btn-danger w-full btn-sm"
-                  onClick={() => disputePaymentMutation.mutate()}
+                  onClick={() => setShowDisputeModal(true)}
                   disabled={confirmPaymentMutation.isPending || disputePaymentMutation.isPending}
                 >
-                  {disputePaymentMutation.isPending ? 'Aguarde...' : 'Contestar pagamento'}
+                  Contestar pagamento
+                </button>
+              </div>
+            )}
+
+            {/* Vendedor pode aceitar da disputa */}
+            {displayStatus === 'PAYMENT_DISPUTED' && isSeller && (
+              <div className="pt-2 border-t border-gray-100">
+                <button
+                  className="btn-primary w-full btn-sm"
+                  onClick={() => confirmPaymentMutation.mutate()}
+                  disabled={confirmPaymentMutation.isPending}
+                >
+                  {confirmPaymentMutation.isPending ? 'Aguarde...' : 'Aceitar pagamento'}
                 </button>
               </div>
             )}
@@ -511,12 +683,27 @@ export function AuctionDetailPage() {
               </div>
             )}
 
-            {/* Pagamento contestado */}
+            {/* Pagamento contestado — banner */}
             {displayStatus === 'PAYMENT_DISPUTED' && (
-              <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-                {isWinner
-                  ? 'O vendedor não identificou seu pagamento. Entre em contato com o suporte.'
-                  : 'Você contestou o pagamento. O suporte foi notificado.'}
+              <div className="space-y-2">
+                <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                  {isWinner
+                    ? 'O vendedor contestou seu pagamento. Use o chat abaixo para resolver.'
+                    : 'Você contestou o pagamento. Use o chat abaixo para conversar com o comprador.'}
+                </div>
+                {auction.paymentReceiptUrl && (
+                  <div className="rounded-md bg-gray-50 border border-gray-200 p-3 text-sm flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base text-gray-500">receipt_long</span>
+                    <a
+                      href={auction.paymentReceiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-600 hover:underline truncate"
+                    >
+                      Ver comprovante de pagamento
+                    </a>
+                  </div>
+                )}
               </div>
             )}
 
@@ -605,6 +792,104 @@ export function AuctionDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de contestação de pagamento */}
+      {showDisputeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-red-600">report</span>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Contestar pagamento</h2>
+            </div>
+
+            <p className="text-sm text-gray-600">
+              Informe o motivo da contestação. O comprador receberá essa mensagem e poderá responder pelo chat.
+            </p>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">Motivo *</label>
+              <textarea
+                className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 resize-none placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition"
+                rows={4}
+                placeholder="Ex: Não identifiquei o pagamento no extrato bancário..."
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button
+                className="flex-1 btn-secondary btn-sm"
+                onClick={() => { setShowDisputeModal(false); setDisputeReason('') }}
+                disabled={disputePaymentMutation.isPending}
+              >
+                Cancelar
+              </button>
+              <button
+                className="flex-1 btn-danger btn-sm"
+                onClick={() => disputePaymentMutation.mutate(disputeReason)}
+                disabled={!disputeReason.trim() || disputePaymentMutation.isPending}
+              >
+                {disputePaymentMutation.isPending ? 'Aguarde...' : 'Confirmar contestação'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de reporte de leilão */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-orange-600">report</span>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Reportar leilão ao admin</h2>
+            </div>
+
+            <p className="text-sm text-gray-600">
+              Use este recurso se a disputa não tiver solução. O admin será notificado e poderá intervir.
+            </p>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">Descreva o problema *</label>
+              <textarea
+                className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 resize-none placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition"
+                rows={4}
+                placeholder="Descreva o que aconteceu e por que precisa de intervenção..."
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+              />
+            </div>
+
+            {reportAuctionMutation.isSuccess && (
+              <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">
+                Reporte enviado! O admin irá analisar em breve.
+              </p>
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <button
+                className="flex-1 btn-secondary btn-sm"
+                onClick={() => { setShowReportModal(false); setReportReason('') }}
+                disabled={reportAuctionMutation.isPending}
+              >
+                Cancelar
+              </button>
+              <button
+                className="flex-1 btn-sm px-4 py-2 rounded-lg font-semibold text-sm text-white bg-orange-500 hover:bg-orange-600 transition-colors disabled:opacity-50"
+                onClick={() => reportAuctionMutation.mutate(reportReason)}
+                disabled={!reportReason.trim() || reportAuctionMutation.isPending || reportAuctionMutation.isSuccess}
+              >
+                {reportAuctionMutation.isPending ? 'Enviando...' : 'Enviar reporte'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de confirmação de pagamento */}
       {showPaymentModal && (

@@ -29,6 +29,7 @@ export function CreateEditAuctionPage() {
 
   // Fotos selecionadas localmente antes da criação do leilão
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([])
+  const [coverIndex, setCoverIndex] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
   const [isCompressing, setIsCompressing] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -102,10 +103,20 @@ export function CreateEditAuctionPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auction', activeId] }),
   })
 
+  const setCoverMutation = useMutation({
+    mutationFn: (imageId: string) => auctionApi.setCoverImage(activeId!, imageId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auction', activeId] }),
+  })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (hasAuction) {
       updateMutation.mutate()
+      return
+    }
+
+    if (stagedFiles.length === 0) {
+      setUploadError('Adicione pelo menos uma foto antes de criar o leilão.')
       return
     }
 
@@ -122,17 +133,21 @@ export function CreateEditAuctionPage() {
       auctionCreated = true
       queryClient.setQueryData(['auction', data.id], data)
 
-      if (stagedFiles.length > 0) {
-        setIsUploading(true)
-        try {
-          for (const staged of stagedFiles) {
-            await auctionApi.uploadImage(data.id, staged.file)
-          }
-          stagedFiles.forEach((s) => URL.revokeObjectURL(s.preview))
-          setStagedFiles([])
-        } finally {
-          setIsUploading(false)
+      setIsUploading(true)
+      try {
+        // Envia a foto capa primeiro (posição 0), depois as demais
+        const ordered = [
+          stagedFiles[coverIndex],
+          ...stagedFiles.filter((_, i) => i !== coverIndex),
+        ]
+        for (const staged of ordered) {
+          await auctionApi.uploadImage(data.id, staged.file)
         }
+        stagedFiles.forEach((s) => URL.revokeObjectURL(s.preview))
+        setStagedFiles([])
+        setCoverIndex(0)
+      } finally {
+        setIsUploading(false)
       }
 
       setCreatedId(data.id)
@@ -175,11 +190,16 @@ export function CreateEditAuctionPage() {
     }
   }
 
-  // Remove foto staged
+  // Remove foto staged e ajusta índice da capa
   const removeStagedFile = (index: number) => {
     setStagedFiles((prev) => {
       URL.revokeObjectURL(prev[index].preview)
       return prev.filter((_, i) => i !== index)
+    })
+    setCoverIndex((prev) => {
+      if (index === prev) return 0
+      if (index < prev) return prev - 1
+      return prev
     })
   }
 
@@ -284,7 +304,10 @@ export function CreateEditAuctionPage() {
           <div className="flex flex-col gap-2 pt-2">
             <button
               className="btn-primary w-full"
-              onClick={() => navigate('/my-auctions')}
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['my-auctions'] })
+                navigate('/my-auctions')
+              }}
             >
               Ver meus leilões
             </button>
@@ -420,12 +443,26 @@ export function CreateEditAuctionPage() {
               ) : (
                 <div className="grid grid-cols-3 gap-3">
                   {stagedFiles.map((staged, index) => (
-                    <div key={index} className="relative group aspect-square">
+                    <div key={index} className={`relative group aspect-square rounded-lg overflow-hidden ring-2 transition-all ${index === coverIndex ? 'ring-primary-500' : 'ring-transparent'}`}>
                       <img
                         src={staged.preview}
                         alt="Foto do produto"
-                        className="w-full h-full object-cover rounded-lg"
+                        className="w-full h-full object-cover"
                       />
+                      {index === coverIndex && (
+                        <div className="absolute top-1 left-1 bg-primary-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                          Capa
+                        </div>
+                      )}
+                      {index !== coverIndex && (
+                        <button
+                          type="button"
+                          className="absolute top-1 left-1 bg-black/50 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => setCoverIndex(index)}
+                        >
+                          Tornar capa
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
@@ -513,16 +550,31 @@ export function CreateEditAuctionPage() {
               {[...existingImages]
                 .sort((a, b) => a.position - b.position)
                 .map((img) => (
-                  <div key={img.id} className="relative group aspect-square">
+                  <div key={img.id} className={`relative group aspect-square rounded-lg overflow-hidden ring-2 transition-all ${img.position === 0 ? 'ring-primary-500' : 'ring-transparent'}`}>
                     <img
                       src={img.fileUrl}
                       alt="Foto do leilão"
-                      className="w-full h-full object-cover rounded-lg"
+                      className="w-full h-full object-cover"
                     />
+                    {img.position === 0 && (
+                      <div className="absolute top-1 left-1 bg-primary-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        Capa
+                      </div>
+                    )}
+                    {img.position !== 0 && (
+                      <button
+                        type="button"
+                        className="absolute top-1 left-1 bg-black/50 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        disabled={setCoverMutation.isPending}
+                        onClick={() => setCoverMutation.mutate(img.id)}
+                      >
+                        Tornar capa
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-                      disabled={deleteMutation.isPending}
+                      disabled={deleteMutation.isPending || setCoverMutation.isPending}
                       onClick={() => deleteMutation.mutate(img.id)}
                     >
                       ×

@@ -1,7 +1,7 @@
 import http from './http'
 import type { AuctionResponse } from '@/types/auction'
 import type { PageResponse } from '@/types/bid'
-import type { BuyerReportResponse } from '@/types/report'
+import type { BuyerReportResponse, AuctionReportResponse } from '@/types/report'
 
 export const adminApi = {
   listPending: (page = 0, size = 50) =>
@@ -22,4 +22,10 @@ export const adminApi = {
 
   resolveReport: (id: string, action: string) =>
     http.post(`/admin/buyer-reports/${id}/resolve`, { action }),
+
+  listAuctionReports: () =>
+    http.get<AuctionReportResponse[]>('/admin/auction-reports').then((r) => r.data),
+
+  resolveAuctionReport: (id: string) =>
+    http.post(`/admin/auction-reports/${id}/resolve`),
 }
